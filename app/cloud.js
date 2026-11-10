@@ -120,6 +120,18 @@ CANCELLED.prototype = Object.create(Error.prototype);
 // Each speaker turn is split into chunks no longer than SEGMENT_SECONDS,
 // using word-level timestamps so every transcript line stays ~5s.
 const SEGMENT_SECONDS = 5;
+
+// Strip dashes used as punctuation (em/en dash, or a spaced hyphen) so the
+// transcript reads naturally and not "AI-generated". Real hyphenated words
+// like "well-known" have no surrounding spaces, so they're left untouched.
+function cleanText(s) {
+  return String(s || "")
+    .replace(/\s*[—–]\s*/g, " ")   // em/en dash → space
+    .replace(/\s+-+\s+/g, " ")     // spaced hyphen(s) used as a dash → space
+    .replace(/\s{2,}/g, " ")       // tidy any double spaces left behind
+    .trim();
+}
+
 function mapAssemblyAI(t, fileName) {
   const utterances = t.utterances || [];
   const order = [...new Set(utterances.map((u) => u.speaker))].sort();
@@ -130,7 +142,7 @@ function mapAssemblyAI(t, fileName) {
     const words = Array.isArray(u.words) && u.words.length ? u.words : null;
     if (!words) {
       // No word timing available — keep the whole turn as one segment.
-      segments.push({ speaker, start: u.start / 1000, end: u.end / 1000, text: (u.text || "").trim() });
+      segments.push({ speaker, start: u.start / 1000, end: u.end / 1000, text: cleanText(u.text) });
       continue;
     }
     let chunk = [];
@@ -141,7 +153,7 @@ function mapAssemblyAI(t, fileName) {
         speaker,
         start: chunkStart / 1000,
         end: chunk[chunk.length - 1].end / 1000,
-        text: chunk.map((w) => w.text).join(" ").trim(),
+        text: cleanText(chunk.map((w) => w.text).join(" ")),
       });
       chunk = [];
       chunkStart = null;
