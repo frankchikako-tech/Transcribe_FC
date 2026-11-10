@@ -115,17 +115,46 @@ CANCELLED.prototype = Object.create(Error.prototype);
 // ---------------------------------------------------------------------------
 // 3. Map AssemblyAI result → our Word-format contract
 // ---------------------------------------------------------------------------
-// AssemblyAI: { speaker: "A", start: ms, end: ms, text }  (utterances[])
+// AssemblyAI: { speaker: "A", start: ms, end: ms, text, words:[{text,start,end}] }  (utterances[])
 // Ours:       { speaker: "Speaker N", start: s, end: s, text }
+// Each speaker turn is split into chunks no longer than SEGMENT_SECONDS,
+// using word-level timestamps so every transcript line stays ~5s.
+const SEGMENT_SECONDS = 5;
 function mapAssemblyAI(t, fileName) {
   const utterances = t.utterances || [];
   const order = [...new Set(utterances.map((u) => u.speaker))].sort();
-  const segments = utterances.map((u) => ({
-    speaker: `Speaker ${order.indexOf(u.speaker) + 1}`,
-    start: u.start / 1000,
-    end: u.end / 1000,
-    text: (u.text || "").trim(),
-  }));
+  const windowMs = SEGMENT_SECONDS * 1000;
+  const segments = [];
+  for (const u of utterances) {
+    const speaker = `Speaker ${order.indexOf(u.speaker) + 1}`;
+    const words = Array.isArray(u.words) && u.words.length ? u.words : null;
+    if (!words) {
+      // No word timing available — keep the whole turn as one segment.
+      segments.push({ speaker, start: u.start / 1000, end: u.end / 1000, text: (u.text || "").trim() });
+      continue;
+    }
+    let chunk = [];
+    let chunkStart = null;
+    const flush = () => {
+      if (!chunk.length) return;
+      segments.push({
+        speaker,
+        start: chunkStart / 1000,
+        end: chunk[chunk.length - 1].end / 1000,
+        text: chunk.map((w) => w.text).join(" ").trim(),
+      });
+      chunk = [];
+      chunkStart = null;
+    };
+    for (const w of words) {
+      // Close the current chunk before a word would push it past the window,
+      // so each segment stays within ~SEGMENT_SECONDS (a lone long word aside).
+      if (chunkStart !== null && w.end - chunkStart > windowMs) flush();
+      if (chunkStart === null) chunkStart = w.start;
+      chunk.push(w);
+    }
+    flush();
+  }
   return {
     file: fileName,
     duration_s: Math.round((t.audio_duration || 0) * 10) / 10,
