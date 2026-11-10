@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Transcribe</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="pane">
+    <header class="pane-title">
+      <span>Transcribe</span>
+      <button id="settings-btn" class="icon-btn" title="Settings">⚙</button>
+    </header>
+
+    <div class="pane-body">
+      <p class="hint">
+        Generate a speaker-labeled transcript by uploading your audio file (wav, mp4, m4a, mp3, flac, ogg).
+        Fast cloud transcription with automatic speaker labels. Add your free API key in ⚙ settings.
+      </p>
+
+      <!-- settings panel (hidden by default) -->
+      <section id="settings-panel" class="settings hidden">
+        <select id="engine-select" class="hidden">
+          <option value="assemblyai" selected>AssemblyAI cloud</option>
+        </select>
+        <label>AssemblyAI API key</label>
+        <input id="aai-key" type="password" placeholder="paste your API key" />
+        <small class="fineprint">Get a free key at
+          <a href="#" id="aai-link">assemblyai.com</a> → Dashboard → API Keys. Stored only on this PC.</small>
+        <input id="hf-token" type="hidden" />
+        <label>Max speakers</label>
+        <select id="max-speakers">
+          <option value="auto" selected>Auto (detect)</option>
+          <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+        </select>
+        <button id="save-settings" class="btn">Save settings</button>
+        <small class="fineprint">Audio is uploaded to AssemblyAI for GPU-fast transcription,
+        then the result comes back here. Your key is stored only in this app's local data.</small>
+      </section>
+
+      <!-- language picker (Word-parity, en vs auto for now) -->
+      <select id="language" class="select">
+        <option value="en" selected>English (English Only)</option>
+      </select>
+
+      <div class="actions">
+        <button id="upload-btn" class="btn primary">Upload audio</button>
+        <button id="record-btn" class="btn primary" disabled>Start recording</button>
+      </div>
+      <small class="fineprint">Recording arrives in Phase 3 — file upload works now.</small>
+
+      <div id="file-row" class="file-row hidden">
+        <span id="file-name"></span>
+        <button id="start-btn" class="btn primary">Transcribe file</button>
+        <button id="cancel-btn" class="btn danger hidden">Cancel</button>
+      </div>
+      <div id="engine-note" class="fineprint hidden"></div>
+
+      <!-- status -->
+      <section id="status" class="status hidden">
+        <div id="progress-wrap" class="progress invisible">
+          <div class="sweep sweep-a"></div>
+          <div class="sweep sweep-b"></div>
+          <div id="bar"></div>
+        </div>
+        <div id="status-text">Working…</div>
+        <pre id="log" class="log"></pre>
+      </section>
+
+      <!-- transcript -->
+      <section id="transcript" class="transcript hidden">
+        <div id="meta" class="meta"></div>
+        <div id="segments"></div>
+        <button id="export-btn" class="btn">Export transcript</button>
+      </section>
+    </div>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>

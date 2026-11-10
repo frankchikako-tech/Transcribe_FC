@@ -1,0 +1,29 @@
+# Heavy / generated — never push these
+venv/
+app/node_modules/
+app/dist/
+app/install_builder*.log
+app/build_dist.log
+npm_install_builder.log
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Local run logs & test evidence
+*.log
+
+# Secrets & local app config
+app/settings.json
+*.env
+.env
+
+# Test audio & generated transcript artifacts (big, regenerable)
+tmp/
+*.wav
+*.mp3
+sample_meeting.*
+
+# OS cruft
+Thumbs.db
+.DS_Store

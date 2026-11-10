@@ -1,0 +1,44 @@
+{
+  "name": "transcriber-app",
+  "version": "1.0.0",
+  "description": "Audio transcriber with speaker diarization — free local engine + fast cloud engine (Word Transcribe-style)",
+  "main": "main.js",
+  "author": "Frank",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.frank.transcriber",
+    "productName": "Transcribe",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "index.html",
+      "styles.css",
+      "cloud.js",
+      "assets/**"
+    ],
+    "win": {
+      "icon": "assets/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Transcribe"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^26.18.0"
+  }
+}
