@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("api", {
   transcribe: (path) => ipcRenderer.invoke("transcribe", path),
   cancel: () => ipcRenderer.invoke("cancel"),
   export: (args) => ipcRenderer.invoke("export-transcript", args),
+  exportDocx: (args) => ipcRenderer.invoke("export-transcript-docx", args),
   readSettings: () => ipcRenderer.invoke("read-settings"),
   appVersion: () => ipcRenderer.invoke("app-version"),
   saveSettings: (s) => ipcRenderer.invoke("save-settings", s),

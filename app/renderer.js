@@ -206,6 +206,7 @@ async function setupPlayer() {
     const oc = new OfflineAudioContext(1, 1, 22050);
     const ab = await oc.decodeAudioData(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
     const ch = ab.getChannelData(0);
+    audioDuration = ab.duration || audioDuration;   // used for the transcribe-% estimate
     const BARS = 400, step = Math.floor(ch.length / BARS) || 1;
     wavePeaks = new Array(BARS);
     for (let i = 0; i < BARS; i++) {
@@ -514,7 +515,11 @@ window.api.onEngineLog((text) => {
     // engine reports real transcription progress as "PROGRESS <pct>"
     if (line.startsWith("PROGRESS ")) {
       const pct = parseFloat(line.slice(9));
-      if (!isNaN(pct)) setDeterminate(10 + Math.min(50, pct / 1.8)); // stage 2 maps 0-100% → bar 10-60
+      if (!isNaN(pct)) {
+        const disp = Math.min(100, Math.round(pct));
+        setDeterminate(10 + Math.min(50, pct / 1.8)); // stage 2 maps 0-100% → bar 10-60
+        setStatus(`Transcribing audio… ${disp}%`);
+      }
       continue;
     }
     if (line.includes("[1/3]")) { setStatus("Loading engine…"); setIndeterminate(); }
@@ -539,6 +544,30 @@ function setDeterminate(pct) {
   el("bar").style.width = Math.min(100, Math.max(0, pct)) + "%";
 }
 
+// --- estimated transcribe % ---
+// AssemblyAI gives no real percent while processing, so we estimate from the
+// file's length and typical cloud speed (~6x realtime). Capped at 95% so the
+// number never claims done before the real transcript lands.
+let audioDuration = 0;      // seconds, set by setupPlayer after decode
+let transcribeTimer = null;
+let transcribeStartedAt = 0;
+
+function startTranscribeEstimate() {
+  stopTranscribeEstimate();
+  transcribeStartedAt = Date.now();
+  const expected = Math.max(15, (audioDuration || 0) / 6); // est. seconds to transcribe
+  transcribeTimer = setInterval(() => {
+    const elapsed = (Date.now() - transcribeStartedAt) / 1000;
+    const pct = Math.min(95, (elapsed / expected) * 100);
+    setDeterminate(40 + pct * 0.55);                 // bar band 40 → 95
+    setStatus(`Transcribing audio… ${Math.floor(pct)}%`);
+  }, 500);
+}
+
+function stopTranscribeEstimate() {
+  if (transcribeTimer) { clearInterval(transcribeTimer); transcribeTimer = null; }
+}
+
 // Diarization has no internal progress signal → show the sweeping line
 // (replaces the previous creeping-percentage approach: matches Word's pane)
 function startCrawl(from, to) { setIndeterminate(); }
@@ -549,9 +578,9 @@ function handleCloudLine(rest) {
   const kind = sp < 0 ? rest : rest.slice(0, sp);
   const arg = sp < 0 ? "" : rest.slice(sp + 1);
   if (kind === "stage") {
-    if (arg === "upload") { setStatus("Uploading audio…"); setDeterminate(2); }
-    if (arg === "transcribing") { setStatus("Transcribing audio…"); setIndeterminate(); }
-    if (arg === "fetching") { setStatus("Fetching transcript…"); setIndeterminate(); }
+    if (arg === "upload") { stopTranscribeEstimate(); setStatus("Uploading audio…"); setDeterminate(2); }
+    if (arg === "transcribing") { startTranscribeEstimate(); }
+    if (arg === "fetching") { stopTranscribeEstimate(); setStatus("Fetching transcript…"); setDeterminate(96); }
   } else if (kind === "upload") {
     const pct = parseFloat(arg);
     if (!isNaN(pct)) setDeterminate(2 + Math.min(100, pct) / 100 * 38); // upload 0-100% → bar 2-40
@@ -585,6 +614,7 @@ function beginRun(message) {
 
 function endRun() {
   engineRunning = false;
+  stopTranscribeEstimate();
   el("cancel-btn").classList.add("hidden");
   el("start-btn").disabled = false;
   el("upload-btn").disabled = false;
@@ -684,4 +714,20 @@ el("export-btn").addEventListener("click", async () => {
     defaultName: t.file.replace(/\.[^.]+$/, "") + ".transcript.md",
   });
   if (out) alert("Saved to " + out);
+});
+
+// --- export as Word document (example format: "0:00 0:22 speaker001 They moved to New York.") ---
+el("export-docx-btn").addEventListener("click", async () => {
+  if (!currentTranscript) return;
+  const t = currentTranscript;
+  const out = await window.api.exportDocx({
+    title: t.file || el("file-name").textContent || "Transcript",
+    subtitle: `${mmssFmt(t.duration_s || 0)} · ${t.speakers} speaker(s) · Transcribe`,
+    segments: (t.segments || []).map((s) => ({
+      start: s.start, end: s.end, speaker: s.speaker, text: s.text,
+    })),
+    defaultName: (t.file || "transcript").replace(/\.[^.]+$/, "") + ".docx",
+  });
+  if (out && out.error) alert("Export failed: " + out.error);
+  else if (out) alert("Saved to " + out);
 });

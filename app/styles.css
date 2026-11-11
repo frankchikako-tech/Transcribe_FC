@@ -393,6 +393,14 @@ body.dark .error-panel { background: #392522; border-color: #6b3c34; }
 .details-link:hover { color: var(--fg); }
 
 .transcript { display: flex; flex-direction: column; gap: 6px; }
+.transcript-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px;
+  position: sticky; top: -18px;   /* counters .pane-body padding → hugs the pane top */
+  margin: -6px -6px 0; padding: 6px;
+  background: var(--bg);
+  z-index: 5;
+}
 .meta { color: var(--muted-fg); font-size: 12px; }
 
 .segment {

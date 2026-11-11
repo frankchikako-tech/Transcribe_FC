@@ -314,3 +314,45 @@ ipcMain.handle("export-transcript", async (e, { markdown, defaultName }) => {
   fs.writeFileSync(res.filePath, markdown, "utf8");
   return res.filePath;
 });
+
+// Word document export — Word Transcribe-style plain lines:
+// "0:00 0:22 speaker001 They moved to New York."
+const mmss = (s) => {
+  const m = Math.floor(s / 60), x = Math.round(s % 60);
+  return `${m}:${String(x).padStart(2, "0")}`;
+};
+
+ipcMain.handle("export-transcript-docx", async (e, { title, subtitle, segments, defaultName }) => {
+  const res = await dialog.showSaveDialog(mainWindow, {
+    title: "Save transcript as Word document",
+    defaultPath: defaultName || "transcript.docx",
+    filters: [{ name: "Word document", extensions: ["docx"] }],
+  });
+  if (res.canceled || !res.filePath) return null;
+  try {
+    const { Document, Packer, Paragraph, TextRun } = require("docx");
+    const mono = (text, extra = {}) =>
+      new TextRun({ text, font: "Consolas", size: 20, ...extra }); // 10pt Consolas, example-format look
+    const children = [
+      new Paragraph({ children: [mono(title || "Transcript", { bold: true, size: 24 })], spacing: { after: 80 } }),
+      new Paragraph({ children: [mono(subtitle || "", { color: "666666" })], spacing: { after: 200 } }),
+    ];
+    for (const seg of segments || []) {
+      const num = String((seg.speaker.match(/\d+/) || ["1"])[0]).padStart(3, "0");
+      children.push(
+        new Paragraph({
+          spacing: { after: 80 },
+          children: [
+            mono(`${mmss(seg.start)} ${mmss(seg.end)} speaker${num} `),
+            mono(seg.text),
+          ],
+        })
+      );
+    }
+    const doc = new Document({ sections: [{ children }] });
+    fs.writeFileSync(res.filePath, await Packer.toBuffer(doc));
+    return res.filePath;
+  } catch (err) {
+    return { error: String(err.message || err) };
+  }
+});
