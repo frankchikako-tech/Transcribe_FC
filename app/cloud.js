@@ -153,10 +153,14 @@ const SEGMENT_SECONDS = 5;
 // Strip dashes used as punctuation (em/en dash, or a spaced hyphen) so the
 // transcript reads naturally and not "AI-generated". Real hyphenated words
 // like "well-known" have no surrounding spaces, so they're left untouched.
+// Dashes at the very start/end are dropped too — chunking splits turns every
+// ~5s, so "…done -" / "- well…" boundary dashes would otherwise survive.
 function cleanText(s) {
   return String(s || "")
-    .replace(/\s*[—–]\s*/g, " ")   // em/en dash → space
+    .replace(/\s*[—–]\s*/g, " ")   // em/en dash anywhere → space
     .replace(/\s+-+\s+/g, " ")     // spaced hyphen(s) used as a dash → space
+    .replace(/^[\s—–-]+/, "")      // leading dash(es) (segment boundary)
+    .replace(/[\s—–-]+$/, "")      // trailing dash(es) (segment boundary)
     .replace(/\s{2,}/g, " ")       // tidy any double spaces left behind
     .trim();
 }

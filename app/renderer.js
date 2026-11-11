@@ -676,7 +676,7 @@ function renderTranscript(t) {
       `<span class="seg-time">${mmss(seg.start)}</span>` +
       `<span class="seg-text"></span>` +
       `<span class="seg-actions"><button title="Copy text">＋</button></span>`;
-    div.querySelector(".seg-text").textContent = seg.text;
+    div.querySelector(".seg-text").textContent = cleanDash(seg.text);
     // click anywhere on the segment → seek the player there (Word-like)
     div.addEventListener("click", (e) => {
       if (e.target.tagName === "BUTTON") return;
@@ -692,6 +692,19 @@ function renderTranscript(t) {
 }
 
 // --- export flow ---
+
+// Belt-and-braces dash cleanup for display + exports: transcripts saved by
+// older versions (or the local engine) may still contain punctuation dashes.
+// Idempotent — running it on already-clean text changes nothing.
+function cleanDash(s) {
+  return String(s || "")
+    .replace(/\s*[—–]\s*/g, " ")
+    .replace(/\s+-+\s+/g, " ")
+    .replace(/^[\s—–-]+/, "")
+    .replace(/[\s—–-]+$/, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
 
 // Topic analysis (local, no cloud call): score words by frequency, skip stopwords.
 const TOPIC_STOPWORDS = new Set((
@@ -753,7 +766,7 @@ el("export-btn").addEventListener("click", async () => {
   };
   for (const seg of t.segments) {
     if (seg.speaker !== last) lines.push("");
-    lines.push(`${seg.speaker} [${mmss(seg.start)}]: ${seg.text}`);
+    lines.push(`${seg.speaker} [${mmss(seg.start)}]: ${cleanDash(seg.text)}`);
     last = seg.speaker;
   }
   const out = await window.api.export({
@@ -771,7 +784,7 @@ el("export-docx-btn").addEventListener("click", async () => {
     title: t.file || el("file-name").textContent || "Transcript",
     subtitle: `${mmssFmt(t.duration_s || 0)} · ${t.speakers} speaker(s) · Transcribe`,
     segments: (t.segments || []).map((s) => ({
-      start: s.start, end: s.end, speaker: s.speaker, text: s.text,
+      start: s.start, end: s.end, speaker: s.speaker, text: cleanDash(s.text),
     })),
     defaultName: suggestedExportName(t, "docx"),
   });
