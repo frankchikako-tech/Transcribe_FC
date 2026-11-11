@@ -93,7 +93,7 @@ async function aaiUploadRetry(filePath, apiKey, onFraction, onLog, isCancelled, 
 // ---------------------------------------------------------------------------
 // 2. Create + poll the job
 // ---------------------------------------------------------------------------
-async function aaiCreateTranscript(apiKey, uploadUrl, languageCode, speakersExpected) {
+async function aaiCreateTranscript(apiKey, uploadUrl, languageCode, speakersExpected, disfluencies) {
   const body = {
     audio_url: uploadUrl,
     speaker_labels: true, // diarization — maps to our Word-style segments
@@ -104,6 +104,8 @@ async function aaiCreateTranscript(apiKey, uploadUrl, languageCode, speakersExpe
   // same question); "auto" lets AssemblyAI cluster freely.
   const n = parseInt(speakersExpected, 10);
   if (!isNaN(n) && n >= 1) body.speakers_expected = n;
+  // Filler words ("um", "uh") are dropped by default; the toggle re-adds them.
+  if (disfluencies) body.disfluencies = true;
   const res = await fetch(`${AAI}/v2/transcript`, {
     method: "POST",
     headers: { authorization: apiKey, "content-type": "application/json" },
@@ -270,7 +272,7 @@ async function assemblyAITranscribe(opts) {
 
     // Transcribe
     emitStage("transcribing");
-    const job = await aaiCreateTranscript(opts.apiKey, uploadUrl, opts.languageCode, opts.maxSpeakers);
+    const job = await aaiCreateTranscript(opts.apiKey, uploadUrl, opts.languageCode, opts.maxSpeakers, opts.disfluencies);
     onEvent({ type: "log", text: `Job ${job.id} (${job.status}).\n` });
     onEvent({ type: "status", status: job.status });
     const final = await aaiPollTranscript(

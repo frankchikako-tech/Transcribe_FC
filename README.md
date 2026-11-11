@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/frankchikako-tech/Transcribe_FC/releases/latest/download/Transcribe-Setup-1.0.0.exe">
-    <img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-1.0.0-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"/>
+  <a href="https://github.com/frankchikako-tech/Transcribe_FC/releases/latest/download/Transcribe-Setup-1.0.1.exe">
+    <img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-1.0.1-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"/>
   </a>
 </p>
 
@@ -19,7 +19,7 @@
 
 ## Install in 4 steps
 
-1. Click **⬇ Download for Windows** above and run **`Transcribe-Setup-1.0.0.exe`**.
+1. Click **⬇ Download for Windows** above and run **`Transcribe-Setup-1.0.1.exe`**.
    *(Windows may say "unknown publisher" — click **More info → Run anyway**. That's normal for a new, unsigned app.)*
 2. It installs and drops a **Transcribe** icon on your desktop.
 3. Open it → click **⚙ settings** → paste a free **AssemblyAI API key**
@@ -32,6 +32,7 @@ Supported audio: `wav`, `mp3`, `m4a`, `mp4`, `flac`, `ogg`.
 
 - 🎙️ **Speaker labels** — automatically tells who said what (Speaker 1, Speaker 2…)
 - ⏱️ **Timestamps** on every segment
+- 💬 **Filler words kept** — "um", "uh" and friends stay in the transcript (toggle in settings)
 - ☁️ **Fast cloud engine** (AssemblyAI, GPU-powered) with a live cost estimate before you run
 - 📄 **Export** your transcript to text / Markdown / subtitles
 

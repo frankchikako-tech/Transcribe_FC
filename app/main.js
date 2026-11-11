@@ -93,6 +93,7 @@ async function cloudTranscribe(audioPath, settings) {
     apiKey: settings.aaiKey,
     languageCode: settings.language || "en",
     maxSpeakers: parseInt(settings.maxSpeakers, 10),
+    disfluencies: settings.disfluencies !== false, // default ON
     onEvent: (ev) => {
       if (ev.type === "upload-progress") {
         mainWindow.webContents.send("engine-log", `CLOUD upload ${ev.pct.toFixed(1)}\n`);

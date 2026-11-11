@@ -4,6 +4,39 @@ let currentFile = null;
 let currentTranscript = null;
 let engineRunning = false;
 
+// --- first-run init: settings sync + welcome card ---
+(async () => {
+  const s = await window.api.readSettings();
+  if (s.provider) el("engine-select").value = s.provider;
+  if (s.aaiKey) el("aai-key").value = s.aaiKey;
+  if (s.hfToken) el("hf-token").value = s.hfToken;
+  if (s.maxSpeakers) el("max-speakers").value = s.maxSpeakers;
+  el("disfluencies").checked = s.disfluencies !== false;
+  if (!s.aaiKey && !s.welcomed) el("welcome").classList.remove("hidden");
+})();
+
+el("welcome-getkey").addEventListener("click", () => {
+  window.api.openExternal("https://www.assemblyai.com/dashboard/api-keys");
+});
+el("welcome-save").addEventListener("click", async () => {
+  const key = el("welcome-key").value.trim();
+  const s = await window.api.readSettings();
+  await window.api.saveSettings({
+    ...s,
+    aaiKey: key || s.aaiKey || "",
+    provider: key ? "assemblyai" : s.provider,
+    welcomed: true,
+  });
+  el("aai-key").value = key || s.aaiKey || "";
+  el("welcome").classList.add("hidden");
+});
+el("welcome-skip").addEventListener("click", async (e) => {
+  e.preventDefault();
+  const s = await window.api.readSettings();
+  await window.api.saveSettings({ ...s, welcomed: true });
+  el("welcome").classList.add("hidden");
+});
+
 // --- settings UI ---
 el("settings-btn").addEventListener("click", async () => {
   const panel = el("settings-panel");
@@ -27,6 +60,8 @@ el("save-settings").addEventListener("click", async () => {
     aaiKey: el("aai-key").value.trim(),
     hfToken: el("hf-token").value.trim(),
     maxSpeakers: el("max-speakers").value,
+    disfluencies: el("disfluencies").checked,
+    welcomed: true,
   });
   el("settings-panel").classList.add("hidden");
 });

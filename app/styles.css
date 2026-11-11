@@ -54,6 +54,13 @@ body {
 
 .settings { border: 1px solid #e1dfdd; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .settings input, .settings select { padding: 7px; }
+.check-row { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.check-row input { width: 16px; height: 16px; padding: 0; accent-color: #0f6cbd; }
+
+.welcome { background: #f5f9fd; border-color: #c7e0f4; padding: 16px; }
+.welcome-title { font-size: 16px; font-weight: 600; }
+.welcome-steps { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: #424242; }
+.welcome a { color: #0f6cbd; }
 .hidden { display: none !important; }
 
 .status { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #f3f3f3; border-radius: 4px; }

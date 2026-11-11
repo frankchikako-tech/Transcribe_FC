@@ -18,6 +18,20 @@
         Fast cloud transcription with automatic speaker labels. Add your free API key in ⚙ settings.
       </p>
 
+      <!-- welcome card (first run, no API key yet) -->
+      <section id="welcome" class="settings welcome hidden">
+        <h2 class="welcome-title">👋 Welcome to Transcribe</h2>
+        <ol class="welcome-steps">
+          <li>Create a <b>free</b> AssemblyAI account (~185 hours of credit included, no card needed)</li>
+          <li>Copy your <b>API key</b> from the dashboard</li>
+          <li>Paste it below — then transcribe anything</li>
+        </ol>
+        <button id="welcome-getkey" class="btn">Get your free key ↗</button>
+        <input id="welcome-key" type="password" placeholder="paste your API key here" />
+        <button id="welcome-save" class="btn primary">Save &amp; start</button>
+        <small><a href="#" id="welcome-skip">Skip — I'll set it up later</a></small>
+      </section>
+
       <!-- settings panel (hidden by default) -->
       <section id="settings-panel" class="settings hidden">
         <select id="engine-select" class="hidden">
@@ -33,6 +47,10 @@
           <option value="auto" selected>Auto (detect)</option>
           <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
         </select>
+        <label class="check-row">
+          <input type="checkbox" id="disfluencies" checked />
+          Include filler words (um, uh) — cloud engine
+        </label>
         <button id="save-settings" class="btn">Save settings</button>
         <small class="fineprint">Audio is uploaded to AssemblyAI for GPU-fast transcription,
         then the result comes back here. Your key is stored only in this app's local data.</small>
