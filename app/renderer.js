@@ -4,7 +4,7 @@ let currentFile = null;
 let currentTranscript = null;
 let engineRunning = false;
 
-// --- first-run init: settings sync + welcome card ---
+// --- first-run init: settings sync + theme + history + welcome card ---
 (async () => {
   const s = await window.api.readSettings();
   if (s.provider) el("engine-select").value = s.provider;
@@ -12,6 +12,8 @@ let engineRunning = false;
   if (s.hfToken) el("hf-token").value = s.hfToken;
   if (s.maxSpeakers) el("max-speakers").value = s.maxSpeakers;
   el("disfluencies").checked = s.disfluencies !== false;
+  await applyTheme(s.theme === "dark" ? "dark" : "light");
+  renderHistory(s.history || []);
   if (!s.aaiKey && !s.welcomed) el("welcome").classList.remove("hidden");
 })();
 
@@ -315,17 +317,154 @@ function highlightSegment() {
 }
 
 // --- transcribe flow ---
-el("start-btn").addEventListener("click", async () => {
+async function runTranscribe() {
   if (!currentFile || engineRunning) return;
   beginRun("Uploading & preparing audio…");
   const res = await window.api.transcribe(currentFile);
   if (res.ok) {
     currentTranscript = res.transcript;
     renderTranscript(res.transcript);
+    saveToHistory(res.transcript);
   } else {
     fail(res.error || "Unknown error");
   }
+}
+el("start-btn").addEventListener("click", runTranscribe);
+el("retry-btn").addEventListener("click", runTranscribe);
+el("details-btn").addEventListener("click", () => {
+  const log = el("log");
+  log.classList.toggle("shown");
+  log.scrollTop = log.scrollHeight;
 });
+
+// --- transcript history (sidebar) ---
+let historyOpen = true;
+
+async function saveToHistory(t) {
+  const item = {
+    id: "t_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name: t.file || el("file-name").textContent || "Transcript",
+    date: Date.now(),
+    duration: t.duration_s || 0,
+    speakers: t.speakers || 0,
+    audioPath: currentFile || "",
+    transcript: t,
+  };
+  const r = await window.api.saveHistory(item);
+  if (r.ok) renderHistory(r.list);
+}
+
+function renderHistory(list) {
+  const ul = el("history-list");
+  ul.innerHTML = "";
+  el("history-empty").classList.toggle("hidden", (list || []).length > 0);
+  for (const h of list || []) {
+    const li = document.createElement("li");
+    li.className = "history-item";
+    const when = new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    li.innerHTML =
+      `<span class="hi-name"></span>` +
+      `<span class="hi-meta">${when}${h.speakers ? " · " + h.speakers + " speaker(s)" : ""}${h.hasAudio ? "" : " · audio gone"}</span>`;
+    li.querySelector(".hi-name").textContent = h.name;
+    li.addEventListener("click", () => openHistoryItem(h.id, h.audioPath));
+    ul.appendChild(li);
+  }
+}
+
+async function openHistoryItem(id, audioPath) {
+  const r = await window.api.loadHistory(id);
+  if (!r.ok) return;
+  const t = r.item.transcript;
+  currentTranscript = t;
+  currentFile = audioPath || null;
+  showMainView();
+  renderTranscript(t);
+  if (audioPath) {
+    el("file-name").textContent = t.file || audioPath.split(/[\\/]/).pop();
+    el("file-row").classList.remove("hidden");
+    el("start-btn").classList.add("hidden");
+    el("cancel-btn").classList.add("hidden");
+    setupPlayer();
+  }
+}
+
+// --- rail + shell ---
+function showMainView() {
+  el("settings-panel").classList.add("hidden");
+  el("welcome").classList.add("hidden");
+  el("home-hint").classList.add("hidden");
+  el("upload-card").classList.add("hidden");
+  el("update-banner").classList.add("hidden");
+}
+
+el("rail-new").addEventListener("click", () => {
+  showMainView();
+  stopPlayback();
+  currentTranscript = null;
+  currentFile = null;
+  el("transcript").classList.add("hidden");
+  el("player").classList.add("hidden");
+  el("file-row").classList.add("hidden");
+  el("status").classList.add("hidden");
+  el("engine-note").classList.add("hidden");
+  el("home-hint").classList.remove("hidden");
+  el("upload-card").classList.remove("hidden");
+  setActiveRail("rail-new");
+});
+
+function setActiveRail(id) {
+  for (const b of ["rail-new", "rail-history", "settings-btn", "rail-theme"]) {
+    el(b).classList.toggle("active", b === id);
+  }
+}
+
+el("rail-history").addEventListener("click", () => {
+  historyOpen = !historyOpen;
+  el("sidebar").classList.toggle("hidden-side", !historyOpen);
+  el("rail-history").classList.toggle("active", historyOpen);
+});
+
+// theme (Atomic Chat's neutral palette, two-sided)
+async function applyTheme(theme) {
+  document.body.classList.toggle("dark", theme === "dark");
+  el("rail-theme").textContent = theme === "dark" ? "☀️" : "🌙";
+  el("rail-theme").title = theme === "dark" ? "Switch to light" : "Switch to dark";
+}
+
+el("rail-theme").addEventListener("click", async () => {
+  const dark = !document.body.classList.contains("dark");
+  await applyTheme(dark ? "dark" : "light");
+  const s = await window.api.readSettings();
+  await window.api.saveSettings({ ...s, theme: dark ? "dark" : "light" });
+});
+
+// help popover
+el("rail-help").addEventListener("click", () => {
+  el("help-pop").classList.toggle("hidden");
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#rail-help") && !e.target.closest("#help-pop")) {
+    el("help-pop").classList.add("hidden");
+  }
+});
+el("help-guide").addEventListener("click", () => {
+  el("help-pop").classList.add("hidden");
+  el("settings-btn").click();
+});
+el("help-issues").addEventListener("click", () => {
+  el("help-pop").classList.add("hidden");
+  window.api.openExternal("https://github.com/frankchikako-tech/Transcribe_FC/issues");
+});
+el("help-key").addEventListener("click", () => {
+  el("help-pop").classList.add("hidden");
+  window.api.openExternal("https://www.assemblyai.com/dashboard/api-keys");
+});
+el("side-close").addEventListener("click", () => {
+  historyOpen = false;
+  el("sidebar").classList.add("hidden-side");
+  el("rail-history").classList.remove("active");
+});
+
 
 el("cancel-btn").addEventListener("click", async () => {
   await window.api.cancel();
@@ -333,13 +472,11 @@ el("cancel-btn").addEventListener("click", async () => {
   el("status-text").textContent = "Cancelled.";
 });
 
-// stream engine logs
+// stream engine logs — buffered silently; drives the clean progress UI.
+// The raw log only becomes visible via the error panel's "See technical details".
 window.api.onEngineLog((text) => {
   const log = el("log");
-  log.classList.add("shown");
-  log.style.display = "block";
   log.textContent += text;
-  log.scrollTop = log.scrollHeight;
 
   for (const line of text.split(/\r?\n/)) {
     // cloud engine events (AssemblyAI fast mode)

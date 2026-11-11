@@ -6,118 +6,165 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="pane">
-    <header class="pane-title">
-      <img src="assets/icon-32.png" alt="" />
-      <span>Transcribe</span>
-      <button id="settings-btn" class="icon-btn" title="Settings">⚙</button>
-    </header>
+  <div class="shell">
 
-    <div class="pane-body">
-      <!-- update banner (shows when a newer release exists) -->
-      <section id="update-banner" class="update-banner hidden">
-        <div class="update-title-row">
-          <span id="update-title"></span>
-          <button id="update-skip" class="icon-btn" title="Skip this version">×</button>
-        </div>
-        <ul id="update-notes" class="update-notes"></ul>
-        <div class="update-actions">
-          <button id="update-btn" class="btn primary">Update now</button>
-        </div>
-        <small id="update-hint" class="fineprint hidden"></small>
-      </section>
-
-      <p class="hint">
-        Generate a speaker-labeled transcript by uploading your audio file (wav, mp4, m4a, mp3, flac, ogg).
-        Fast cloud transcription with automatic speaker labels. Add your free API key in ⚙ settings.
-      </p>
-
-      <!-- welcome card (first run, no API key yet) -->
-      <section id="welcome" class="settings welcome hidden">
-        <h2 class="welcome-title">👋 Welcome to Transcribe</h2>
-        <ol class="welcome-steps">
-          <li>Create a <b>free</b> AssemblyAI account (~185 hours of credit included, no card needed)</li>
-          <li>Copy your <b>API key</b> from the dashboard</li>
-          <li>Paste it below — then transcribe anything</li>
-        </ol>
-        <button id="welcome-getkey" class="btn">Get your free key ↗</button>
-        <input id="welcome-key" type="password" placeholder="paste your API key here" />
-        <button id="welcome-save" class="btn primary">Save &amp; start</button>
-        <small><a href="#" id="welcome-skip">Skip — I'll set it up later</a></small>
-      </section>
-
-      <!-- settings panel (hidden by default) -->
-      <section id="settings-panel" class="settings hidden">
-        <select id="engine-select" class="hidden">
-          <option value="assemblyai" selected>AssemblyAI cloud</option>
-        </select>
-        <label>AssemblyAI API key</label>
-        <input id="aai-key" type="password" placeholder="paste your API key" />
-        <small class="fineprint">Get a free key at
-          <a href="#" id="aai-link">assemblyai.com</a> → Dashboard → API Keys. Stored only on this PC.</small>
-        <input id="hf-token" type="hidden" />
-        <label>Max speakers</label>
-        <select id="max-speakers">
-          <option value="auto" selected>Auto (detect)</option>
-          <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-        </select>
-        <label class="check-row">
-          <input type="checkbox" id="disfluencies" checked />
-          Include filler words (um, uh) — cloud engine
-        </label>
-        <button id="save-settings" class="btn">Save settings</button>
-        <button id="check-updates-btn" class="btn">Check for updates now</button>
-        <small id="update-note" class="fineprint"></small>
-        <small class="fineprint">Audio is uploaded to AssemblyAI for GPU-fast transcription,
-        then the result comes back here. Your key is stored only in this app's local data.</small>
-      </section>
-
-      <!-- language picker (Word-parity, en vs auto for now) -->
-      <select id="language" class="select">
-        <option value="en" selected>English (English Only)</option>
-      </select>
-
-      <div class="actions">
-        <button id="upload-btn" class="btn primary">Upload audio</button>
-        <button id="record-btn" class="btn primary" disabled>Start recording</button>
+    <!-- ===== icon rail (60px, Atomic-Chat style) ===== -->
+    <nav class="rail" aria-label="Primary">
+      <img class="rail-logo" src="assets/icon-32.png" alt="Transcribe" draggable="false" />
+      <div class="rail-group">
+        <button id="rail-new" class="rail-btn" title="New transcription" aria-label="New transcription">＋</button>
+        <button id="rail-history" class="rail-btn" title="Transcript history" aria-label="Transcript history">🗒</button>
+        <button id="rail-record" class="rail-btn" title="Start recording (coming soon)" disabled>🎙</button>
       </div>
-      <small class="fineprint">Recording arrives in Phase 3 — file upload works now.</small>
-
-      <div id="file-row" class="file-row hidden">
-        <span id="file-name"></span>
-        <button id="start-btn" class="btn primary">Transcribe file</button>
-        <button id="cancel-btn" class="btn danger hidden">Cancel</button>
-      </div>
-      <div id="engine-note" class="fineprint hidden"></div>
-
-      <!-- Drive-style audio player -->
-      <div id="player" class="player hidden">
-        <button id="play-btn" class="play-btn" title="Play / pause">▶</button>
-        <div class="wave-wrap">
-          <canvas id="wave-canvas"></canvas>
-          <div id="wave-fallback" class="wave-fallback hidden"><div class="wave-track"><div id="wave-bar"></div></div></div>
-        </div>
-        <div id="player-time" class="player-time">0:00 / 0:00</div>
+      <div class="rail-group rail-bottom">
+        <button id="rail-theme" class="rail-btn" title="Toggle dark / light" aria-label="Toggle theme">🌙</button>
+        <button id="rail-help" class="rail-btn" title="Help" aria-label="Help">?</button>
+        <button id="settings-btn" class="rail-btn" title="Settings" aria-label="Settings">⚙</button>
       </div>
 
-      <!-- status -->
-      <section id="status" class="status hidden">
-        <div id="progress-wrap" class="progress invisible">
-          <div class="sweep sweep-a"></div>
-          <div class="sweep sweep-b"></div>
-          <div id="bar"></div>
-        </div>
-        <div id="status-text">Working…</div>
-        <pre id="log" class="log"></pre>
-      </section>
+      <!-- help popover (anchored next to the rail, Atomic-Chat style) -->
+      <div id="help-pop" class="help-pop hidden">
+        <div class="help-label">Help</div>
+        <button id="help-guide" class="help-item">📖 <span>Quick start guide</span></button>
+        <button id="help-issues" class="help-item">🐙 <span>Report an issue on GitHub</span></button>
+        <button id="help-key" class="help-item">🔑 <span>Get a free AssemblyAI key</span></button>
+      </div>
+    </nav>
 
-      <!-- transcript -->
-      <section id="transcript" class="transcript hidden">
-        <div id="meta" class="meta"></div>
-        <div id="segments"></div>
-        <button id="export-btn" class="btn">Export transcript</button>
-      </section>
-    </div>
+    <!-- ===== sidebar panel: transcript history ===== -->
+    <aside id="sidebar" class="side">
+      <div class="side-head">
+        <h2>Transcripts</h2>
+        <button id="side-close" class="icon-btn" title="Hide panel">‹</button>
+      </div>
+      <ul id="history-list" class="history-list" aria-label="Saved transcripts"></ul>
+      <div id="history-empty" class="history-empty">No transcripts yet.<br />Upload audio to make your first one.</div>
+    </aside>
+
+    <!-- ===== main content (the old pane body) ===== -->
+    <main class="content">
+      <div class="pane-body">
+
+        <!-- update banner (shows when a newer release exists) -->
+        <section id="update-banner" class="update-banner hidden">
+          <div class="update-title-row">
+            <span id="update-title"></span>
+            <button id="update-skip" class="icon-btn" title="Skip this version">×</button>
+          </div>
+          <ul id="update-notes" class="update-notes"></ul>
+          <div class="update-actions">
+            <button id="update-btn" class="btn primary">Update now</button>
+          </div>
+          <small id="update-hint" class="fineprint hidden"></small>
+        </section>
+
+        <p class="hint" id="home-hint">
+          Generate a speaker-labeled transcript by uploading your audio file (wav, mp4, m4a, mp3, flac, ogg).
+          Fast cloud transcription with automatic speaker labels. Add your free API key in ⚙ settings.
+        </p>
+
+        <!-- welcome card (first run, no API key yet) -->
+        <section id="welcome" class="settings welcome hidden">
+          <h2 class="welcome-title">👋 Welcome to Transcribe</h2>
+          <ol class="welcome-steps">
+            <li>Create a <b>free</b> AssemblyAI account (~185 hours of credit included, no card needed)</li>
+            <li>Copy your <b>API key</b> from the dashboard</li>
+            <li>Paste it below — then transcribe anything</li>
+          </ol>
+          <button id="welcome-getkey" class="btn">Get your free key ↗</button>
+          <input id="welcome-key" type="password" placeholder="paste your API key here" />
+          <button id="welcome-save" class="btn primary">Save &amp; start</button>
+          <small><a href="#" id="welcome-skip">Skip — I'll set it up later</a></small>
+        </section>
+
+        <!-- settings panel (hidden by default) -->
+        <section id="settings-panel" class="settings hidden">
+          <select id="engine-select" class="hidden">
+            <option value="assemblyai" selected>AssemblyAI cloud</option>
+          </select>
+          <label>AssemblyAI API key</label>
+          <input id="aai-key" type="password" placeholder="paste your API key" />
+          <small class="fineprint">Get a free key at
+            <a href="#" id="aai-link">assemblyai.com</a> → Dashboard → API Keys. Stored only on this PC.</small>
+          <input id="hf-token" type="hidden" />
+          <label>Max speakers</label>
+          <select id="max-speakers">
+            <option value="auto" selected>Auto (detect)</option>
+            <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+          </select>
+          <label class="check-row">
+            <input type="checkbox" id="disfluencies" checked />
+            Include filler words (um, uh) — cloud engine
+          </label>
+          <div class="settings-actions">
+            <button id="save-settings" class="btn">Save settings</button>
+            <button id="check-updates-btn" class="btn">Check for updates now</button>
+          </div>
+          <small id="update-note" class="fineprint"></small>
+          <small class="fineprint">Audio is uploaded to AssemblyAI for GPU-fast transcription,
+          then the result comes back here. Your key is stored only in this app's local data.</small>
+        </section>
+
+        <!-- upload card -->
+        <section id="upload-card" class="upload-card">
+          <!-- language picker (Word-parity, en vs auto for now) -->
+          <select id="language" class="select">
+            <option value="en" selected>English (English Only)</option>
+          </select>
+          <div class="actions">
+            <button id="upload-btn" class="btn primary">Upload audio</button>
+            <button id="record-btn" class="btn primary" disabled>Start recording</button>
+          </div>
+          <small class="fineprint">Recording arrives soon — file upload works now.</small>
+        </section>
+
+        <div id="file-row" class="file-row hidden">
+          <span id="file-name"></span>
+          <button id="start-btn" class="btn primary">Transcribe file</button>
+          <button id="cancel-btn" class="btn danger hidden">Cancel</button>
+        </div>
+        <div id="engine-note" class="fineprint hidden"></div>
+
+        <!-- Drive-style audio player -->
+        <div id="player" class="player hidden">
+          <button id="play-btn" class="play-btn" title="Play / pause">▶</button>
+          <div class="wave-wrap">
+            <canvas id="wave-canvas"></canvas>
+            <div id="wave-fallback" class="wave-fallback hidden"><div class="wave-track"><div id="wave-bar"></div></div></div>
+          </div>
+          <div id="player-time" class="player-time">0:00 / 0:00</div>
+        </div>
+
+        <!-- status -->
+        <section id="status" class="status hidden">
+          <div id="progress-wrap" class="progress invisible">
+            <div class="sweep sweep-a"></div>
+            <div class="sweep sweep-b"></div>
+            <div id="bar"></div>
+          </div>
+          <div id="status-text">Working…</div>
+          <div id="error-panel" class="error-panel hidden">
+            <div class="error-icon">⚠️</div>
+            <div class="error-body">
+              <div class="error-title">We ran into a problem</div>
+              <div id="error-msg" class="error-msg"></div>
+              <div class="error-actions">
+                <button id="retry-btn" class="btn primary">Try again</button>
+                <button id="details-btn" class="details-link">See technical details</button>
+              </div>
+              <pre id="log" class="log"></pre>
+            </div>
+          </div>
+        </section>
+
+        <!-- transcript -->
+        <section id="transcript" class="transcript hidden">
+          <div id="meta" class="meta"></div>
+          <div id="segments"></div>
+          <button id="export-btn" class="btn">Export transcript</button>
+        </section>
+      </div>
+    </main>
   </div>
   <script src="renderer.js"></script>
 </body>

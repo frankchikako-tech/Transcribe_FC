@@ -11,4 +11,7 @@ contextBridge.exposeInMainWorld("api", {
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   checkUpdates: () => ipcRenderer.invoke("check-updates"),
   readAudio: (path) => ipcRenderer.invoke("read-audio", path),
+  saveHistory: (item) => ipcRenderer.invoke("save-history", item),
+  loadHistory: (id) => ipcRenderer.invoke("load-history", id),
+  deleteHistory: (id) => ipcRenderer.invoke("delete-history", id),
 });

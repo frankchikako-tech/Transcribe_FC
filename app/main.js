@@ -214,6 +214,61 @@ function readSettings() {
   }
 }
 
+// ---- transcript history: one JSON file per transcript + an index in settings ----
+const HISTORY_CAP = 50;
+
+function historyDir() {
+  return path.join(app.getPath("userData"), "transcripts");
+}
+
+ipcMain.handle("save-history", (e, item) => {
+  try {
+    const dir = historyDir();
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, item.id + ".json"), JSON.stringify(item, null, 2), "utf8");
+    const s = readSettings();
+    const list = (s.history || []).filter((h) => h.id !== item.id);
+    list.unshift({
+      id: item.id,
+      name: item.name,
+      date: item.date,
+      duration: item.duration,
+      speakers: item.speakers,
+      audioPath: item.audioPath,
+      hasAudio: !!item.audioPath && fs.existsSync(item.audioPath),
+    });
+    // drop dead audio references so sidebar badges stay honest
+    for (const h of list) h.hasAudio = fs.existsSync(h.audioPath || "");
+    s.history = list.slice(0, HISTORY_CAP);
+    fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+    return { ok: true, list: s.history };
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
+ipcMain.handle("load-history", (e, id) => {
+  try {
+    const p = path.join(historyDir(), path.basename(String(id)) + ".json");
+    if (!fs.existsSync(p)) return { ok: false, error: "Not found" };
+    return { ok: true, item: JSON.parse(fs.readFileSync(p, "utf8")) };
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
+ipcMain.handle("delete-history", (e, id) => {
+  try {
+    fs.rmSync(path.join(historyDir(), path.basename(String(id)) + ".json"), { force: true });
+    const s = readSettings();
+    s.history = (s.history || []).filter((h) => h.id !== id);
+    fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+    return { ok: true, list: s.history };
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
 ipcMain.handle("export-transcript", async (e, { markdown, defaultName }) => {
   const res = await dialog.showSaveDialog(mainWindow, {
     title: "Save transcript",
