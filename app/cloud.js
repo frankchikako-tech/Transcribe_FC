@@ -47,20 +47,47 @@ function aaiUpload(filePath, apiKey, onFraction) {
           } else if (res.statusCode === 401) {
             reject(new Error("API key rejected (401) — check the AssemblyAI key in settings."));
           } else {
-            reject(new Error(`Upload failed (HTTP ${res.statusCode}): ${data}`));
+            // 5xx (502/503/504 etc.) are transient AssemblyAI gateway errors — retryable.
+            const e = new Error(`Upload failed (HTTP ${res.statusCode})`);
+            e.statusCode = res.statusCode;
+            e.retryable = res.statusCode >= 500;
+            reject(e);
           }
         });
       }
     );
-    req.on("error", reject);
+    req.on("error", (err) => {
+      err.retryable = true; // network drop / reset — worth retrying
+      reject(err);
+    });
     let sent = 0;
     fs.createReadStream(filePath, { highWaterMark: UPLOADED_CHUNK })
+      .on("error", reject)
       .on("data", (chunk) => {
         sent += chunk.length;
         if (typeof onFraction === "function") onFraction(sent / stat.size);
       })
       .pipe(req);
   });
+}
+
+// Retry the upload on transient failures (5xx gateway errors, dropped connections)
+// with exponential backoff. AssemblyAI occasionally returns 502 under load.
+async function aaiUploadRetry(filePath, apiKey, onFraction, onLog, isCancelled, maxAttempts = 5) {
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    if (isCancelled && isCancelled()) throw new CANCELLED();
+    try {
+      return await aaiUpload(filePath, apiKey, onFraction);
+    } catch (err) {
+      lastErr = err;
+      if (!err.retryable || attempt === maxAttempts) throw err;
+      const waitMs = Math.min(2000 * 2 ** (attempt - 1), 15000); // 2s,4s,8s,15s…
+      if (onLog) onLog(`Upload hiccup (${err.message}) — retrying in ${Math.round(waitMs / 1000)}s (attempt ${attempt + 1}/${maxAttempts})…\n`);
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+  throw lastErr;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,8 +258,12 @@ async function assemblyAITranscribe(opts) {
     // Upload
     emitStage("upload");
     onEvent({ type: "log", text: "Uploading audio to AssemblyAI...\n" });
-    const uploadUrl = await aaiUpload(opts.audioPath, opts.apiKey, (frac) =>
-      onEvent({ type: "upload-progress", pct: frac * 100 })
+    const uploadUrl = await aaiUploadRetry(
+      opts.audioPath,
+      opts.apiKey,
+      (frac) => onEvent({ type: "upload-progress", pct: frac * 100 }),
+      (text) => onEvent({ type: "log", text }),
+      isCancelled
     );
     onEvent({ type: "log", text: "Upload complete.\n" });
     if (isCancelled()) return { ok: false, error: "cancelled" };
