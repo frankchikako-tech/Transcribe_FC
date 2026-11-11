@@ -76,14 +76,23 @@ ipcMain.handle("transcribe", async (e, audioPath) => {
   if (!fs.existsSync(audioPath)) return { ok: false, error: "File not found: " + audioPath };
 
   const settings = readSettings();
-  // Cloud-only build: default to AssemblyAI unless local is explicitly selected.
-  if (settings.provider !== "local") {
-    if (!settings.aaiKey) {
-      return { ok: false, error: "No API key yet. Open ⚙ settings and paste your AssemblyAI key." };
-    }
-    return cloudTranscribe(audioPath, settings);
+  // Only offer the local engine if this machine actually has it (dev checkout).
+  // Installed cloud-only builds have no bundled Python → fall back to cloud.
+  const hasLocalEngine = fs.existsSync(PYTHON);
+  if (settings.provider === "local" && hasLocalEngine) {
+    return localTranscribe(audioPath, settings);
   }
-  return localTranscribe(audioPath, settings);
+  if (!hasLocalEngine && settings.provider === "local") {
+    // settings came from a dev checkout sharing this userData — auto-heal + inform
+    mainWindow.webContents.send(
+      "engine-log",
+      "Local engine isn't included in this install — using fast cloud mode.\n"
+    );
+  }
+  if (!settings.aaiKey) {
+    return { ok: false, error: "No API key yet. Open ⚙ settings and paste your AssemblyAI key." };
+  }
+  return cloudTranscribe(audioPath, settings);
 });
 
 // ---- AssemblyAI cloud engine (fast mode) ----
