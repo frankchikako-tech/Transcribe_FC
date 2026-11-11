@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld("api", {
   saveSettings: (s) => ipcRenderer.invoke("save-settings", s),
   onEngineLog: (cb) => ipcRenderer.on("engine-log", (_e, text) => cb(text)),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
+  checkUpdates: () => ipcRenderer.invoke("check-updates"),
 });

@@ -6,8 +6,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/frankchikako-tech/Transcribe_FC/releases/latest/download/Transcribe-Setup-1.0.1.exe">
-    <img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-1.0.1-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"/>
+  <a href="https://github.com/frankchikako-tech/Transcribe_FC/releases/latest/download/Transcribe-Setup-1.0.2.exe">
+    <img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-1.0.2-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"/>
   </a>
 </p>
 
@@ -19,7 +19,7 @@
 
 ## Install in 4 steps
 
-1. Click **⬇ Download for Windows** above and run **`Transcribe-Setup-1.0.1.exe`**.
+1. Click **⬇ Download for Windows** above and run **`Transcribe-Setup-1.0.2.exe`**.
    *(Windows may say "unknown publisher" — click **More info → Run anyway**. That's normal for a new, unsigned app.)*
 2. It installs and drops a **Transcribe** icon on your desktop.
 3. Open it → click **⚙ settings** → paste a free **AssemblyAI API key**
@@ -35,6 +35,7 @@ Supported audio: `wav`, `mp3`, `m4a`, `mp4`, `flac`, `ogg`.
 - 💬 **Filler words kept** — "um", "uh" and friends stay in the transcript (toggle in settings)
 - ☁️ **Fast cloud engine** (AssemblyAI, GPU-powered) with a live cost estimate before you run
 - 📄 **Export** your transcript to text / Markdown / subtitles
+- 🔔 **In-app updates** — the app checks for new releases and shows what's new (once a day, quietly)
 
 > Your audio is uploaded to AssemblyAI for transcription, then the result comes back into the
 > app. Your API key is stored only in this app's local data on your PC.

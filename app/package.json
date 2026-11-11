@@ -1,6 +1,6 @@
 {
   "name": "transcriber-app",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Audio transcriber with speaker diarization — free local engine + fast cloud engine (Word Transcribe-style)",
   "main": "main.js",
   "author": "Frank",
@@ -22,6 +22,7 @@
       "index.html",
       "styles.css",
       "cloud.js",
+      "update.js",
       "assets/**"
     ],
     "win": {

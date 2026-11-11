@@ -61,6 +61,19 @@ body {
 .welcome-title { font-size: 16px; font-weight: 600; }
 .welcome-steps { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: #424242; }
 .welcome a { color: #0f6cbd; }
+
+.update-banner {
+  border: 1px solid #c7e0f4;
+  background: #f5f9fd;
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.update-title-row { display: flex; align-items: center; justify-content: space-between; font-weight: 600; }
+.update-notes { padding-left: 20px; color: #424242; display: flex; flex-direction: column; gap: 4px; }
+.update-actions { display: flex; gap: 8px; }
 .hidden { display: none !important; }
 
 .status { display: flex; flex-direction: column; gap: 8px; padding: 12px; background: #f3f3f3; border-radius: 4px; }

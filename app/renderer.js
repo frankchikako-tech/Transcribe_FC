@@ -66,6 +66,68 @@ el("save-settings").addEventListener("click", async () => {
   el("settings-panel").classList.add("hidden");
 });
 
+// --- update check (GitHub releases) ---
+let currentUpdateVersion = null;
+
+async function runUpdateCheck(auto) {
+  const s = await window.api.readSettings();
+  await window.api.saveSettings({ ...s, lastUpdateCheck: Date.now() });
+  const r = await window.api.checkUpdates();
+  if (!r.ok) {
+    if (!auto) el("update-note").textContent = "Couldn't check for updates (" + r.error + ")";
+    return;
+  }
+  if (!r.available) {
+    if (!auto) el("update-note").textContent = "You're on the latest version.";
+    return;
+  }
+  if (r.version === s.skippedVersion) return; // user already skipped this one
+  showUpdateBanner(r);
+}
+
+function showUpdateBanner(r) {
+  currentUpdateVersion = r.version;
+  el("update-title").textContent = `🔔 Update available — v${r.version}`;
+  const list = el("update-notes");
+  list.innerHTML = "";
+  for (const n of (r.notes || []).slice(0, 5)) {
+    const li = document.createElement("li");
+    li.textContent = n;
+    list.appendChild(li);
+  }
+  el("update-hint").classList.add("hidden");
+  el("update-banner").classList.remove("hidden");
+}
+
+el("update-btn").addEventListener("click", () => {
+  if (!currentUpdateVersion) return;
+  const r = { version: currentUpdateVersion };
+  window.api.checkUpdates().then((res) => {
+    const url = res.ok && res.url ? res.url : res.releaseUrl;
+    if (url) window.api.openExternal(url);
+  });
+  el("update-hint").textContent =
+    "Installer is downloading in your browser — close Transcribe, then run it to update.";
+  el("update-hint").classList.remove("hidden");
+});
+
+el("update-skip").addEventListener("click", async () => {
+  el("update-banner").classList.add("hidden");
+  const s = await window.api.readSettings();
+  await window.api.saveSettings({ ...s, skippedVersion: currentUpdateVersion });
+});
+
+el("check-updates-btn").addEventListener("click", () => {
+  el("update-note").textContent = "Checking…";
+  runUpdateCheck(false);
+});
+
+// auto-check at most once per 24h, silently
+(async () => {
+  const s = await window.api.readSettings();
+  if (Date.now() - (s.lastUpdateCheck || 0) > 24 * 3600 * 1000) runUpdateCheck(true);
+})();
+
 // --- upload flow ---
 el("upload-btn").addEventListener("click", async () => {
   const p = await window.api.pickAudio();

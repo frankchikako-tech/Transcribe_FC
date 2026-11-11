@@ -5,6 +5,7 @@ const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
 const { assemblyAITranscribe } = require("./cloud");
+const { checkForUpdate } = require("./update");
 
 const PROJECT_ROOT = path.join(__dirname, "..");
 const PYTHON = path.join(PROJECT_ROOT, "venv", "Scripts", "python.exe");
@@ -161,6 +162,14 @@ async function localTranscribe(audioPath, settings) {
 }
 
 ipcMain.handle("read-settings", () => readSettings());
+ipcMain.handle("check-updates", async () => {
+  try {
+    return { ok: true, ...(await checkForUpdate(app.getVersion())) };
+  } catch (err) {
+    return { ok: false, error: String(err.message || err) };
+  }
+});
+
 ipcMain.handle("open-external", (e, url) => {
   // only allow https links out of the pane
   if (typeof url === "string" && url.startsWith("https://")) {

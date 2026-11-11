@@ -13,6 +13,19 @@
     </header>
 
     <div class="pane-body">
+      <!-- update banner (shows when a newer release exists) -->
+      <section id="update-banner" class="update-banner hidden">
+        <div class="update-title-row">
+          <span id="update-title"></span>
+          <button id="update-skip" class="icon-btn" title="Skip this version">×</button>
+        </div>
+        <ul id="update-notes" class="update-notes"></ul>
+        <div class="update-actions">
+          <button id="update-btn" class="btn primary">Update now</button>
+        </div>
+        <small id="update-hint" class="fineprint hidden"></small>
+      </section>
+
       <p class="hint">
         Generate a speaker-labeled transcript by uploading your audio file (wav, mp4, m4a, mp3, flac, ogg).
         Fast cloud transcription with automatic speaker labels. Add your free API key in ⚙ settings.
@@ -52,6 +65,8 @@
           Include filler words (um, uh) — cloud engine
         </label>
         <button id="save-settings" class="btn">Save settings</button>
+        <button id="check-updates-btn" class="btn">Check for updates now</button>
+        <small id="update-note" class="fineprint"></small>
         <small class="fineprint">Audio is uploaded to AssemblyAI for GPU-fast transcription,
         then the result comes back here. Your key is stored only in this app's local data.</small>
       </section>
