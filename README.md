@@ -6,20 +6,20 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/frankchikako-tech/Transcribe_FC/releases/latest/download/Transcribe-Setup-1.1.3.exe">
-    <img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-1.1.3-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"/>
+  <a href="https://github.com/frankchikako-tech/Transcribe_FC/releases/latest/download/Transcribe-Setup-1.1.7.exe">
+    <img src="https://img.shields.io/badge/%E2%AC%87%20Download%20for%20Windows-1.1.7-0078D6?style=for-the-badge&logo=windows&logoColor=white" alt="Download for Windows"/>
   </a>
 </p>
 
 <p align="center">
-  <sub>Windows 10 / 11 · 84 MB · free app (cloud transcription billed by AssemblyAI, ~$0.23/hr)</sub>
+  <sub>Windows 10 / 11 · 86 MB · free app (cloud transcription billed by AssemblyAI, ~$0.23/hr)</sub>
 </p>
 
 ---
 
 ## Install in 4 steps
 
-1. Click **⬇ Download for Windows** above and run **`Transcribe-Setup-1.1.3.exe`**.
+1. Click **⬇ Download for Windows** above and run **`Transcribe-Setup-1.1.7.exe`**.
    *(Windows may say "unknown publisher" — click **More info → Run anyway**. That's normal for a new, unsigned app.)*
 2. It installs and drops a **Transcribe** icon on your desktop.
 3. Open it → click **⚙ settings** → paste a free **AssemblyAI API key**
