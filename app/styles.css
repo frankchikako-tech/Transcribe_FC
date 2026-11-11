@@ -122,6 +122,7 @@ body {
   font-size: 13.5px; color: var(--fg); cursor: pointer;
 }
 .help-item:hover { background: rgba(128,128,128,.08); }
+.help-item svg { width: 17px; height: 17px; flex: none; color: var(--muted-fg); }
 .help-item span { opacity: .85; }
 
 /* ================= sidebar (transcript history) ================= */

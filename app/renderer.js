@@ -661,6 +661,7 @@ function renderTranscript(t) {
   };
   el("meta").textContent =
     `${t.file || el("file-name").textContent} · ${mmss(t.duration_s || 0)} · ${t.speakers} speaker(s)`;
+  el("suggested-name").textContent = `Suggested file name: ${suggestedExportName(t, "docx")}`;
   const segs = el("segments");
   segs.innerHTML = "";
   const palette = ["#0f6cbd", "#8767d3", "#0e7a4d", "#c25e00", "#c23b3b", "#5b6bd3"];
@@ -691,6 +692,52 @@ function renderTranscript(t) {
 }
 
 // --- export flow ---
+
+// Topic analysis (local, no cloud call): score words by frequency, skip stopwords.
+const TOPIC_STOPWORDS = new Set((
+  "the and with that this have was were they them their there from for but not you your " +
+  "she her his him has had what when where which will would could should can may like just " +
+  "about into over than then only also very some such more most other using know think said " +
+  "says going really thing things well okay because after before while those these being been " +
+  "are our ours out all any who whom its it's one two new now did does done get got let yes " +
+  "much many time year years back still even way people little make made take took come came " +
+  "want wanted look looked good great okay yeah okay y'know gonna wanna kinda sorta"
+).split(/\s+/));
+
+function extractTopic(transcript) {
+  const text = (transcript.segments || []).map((s) => s.text).join(" ").toLowerCase();
+  const words = text.match(/[a-z']{3,}/g) || [];
+  const freq = {};
+  for (const w of words) {
+    if (TOPIC_STOPWORDS.has(w)) continue;
+    freq[w] = (freq[w] || 0) + 1;
+  }
+  // score = frequency, slight bonus for longer words (more "topic-like")
+  let best = "transcript", bestScore = 0;
+  for (const w in freq) {
+    const score = freq[w] * (1 + Math.min(1, (w.length - 3) / 6));
+    if (score > bestScore) { best = w; bestScore = score; }
+  }
+  return best;
+}
+
+// File-management format (matches the folder workflow):
+//   <lang>_<topic>_<speakerNNN|multi>__<YYYYMMDD>.<ext>
+//   e.g. en_family_speaker001__20261117.docx
+function suggestedExportName(transcript, ext) {
+  const lang = (el("language").value || "en").split(/[-_]/)[0];
+  const topic = extractTopic(transcript);
+  const speakers = new Set((transcript.segments || []).map((s) => s.speaker));
+  let spk = "multi";
+  if (speakers.size === 1) {
+    const num = String((([...speakers][0] || "").match(/\d+/) || ["1"])[0]).padStart(3, "0");
+    spk = `speaker${num}`;
+  }
+  const d = new Date();
+  const ds = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+  return `${lang}_${topic}_${spk}__${ds}.${ext}`;
+}
+
 el("export-btn").addEventListener("click", async () => {
   if (!currentTranscript) return;
   const t = currentTranscript;
@@ -711,7 +758,7 @@ el("export-btn").addEventListener("click", async () => {
   }
   const out = await window.api.export({
     markdown: lines.join("\n"),
-    defaultName: t.file.replace(/\.[^.]+$/, "") + ".transcript.md",
+    defaultName: suggestedExportName(t, "md"),
   });
   if (out) alert("Saved to " + out);
 });
@@ -726,7 +773,7 @@ el("export-docx-btn").addEventListener("click", async () => {
     segments: (t.segments || []).map((s) => ({
       start: s.start, end: s.end, speaker: s.speaker, text: s.text,
     })),
-    defaultName: (t.file || "transcript").replace(/\.[^.]+$/, "") + ".docx",
+    defaultName: suggestedExportName(t, "docx"),
   });
   if (out && out.error) alert("Export failed: " + out.error);
   else if (out) alert("Saved to " + out);
