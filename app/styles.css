@@ -25,6 +25,8 @@
   --sidebar-accent: #ececec;/* oklch(0.97 0 0) */
   --sidebar-border: #e5e5e5;
   --destructive: #c43241;
+  --btn-hover: #e7e7e7;     /* secondary button hover — clearly darker, never whiter */
+  --primary-hover: #3d3d3d; /* dark button hover */
   --shadow-card: 0 1px 2px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.06);
 }
 body.dark {
@@ -44,6 +46,8 @@ body.dark {
   --sidebar-accent: #3a3a3a;/* oklch(0.269 0 0) ≈ */
   --sidebar-border: rgba(255,255,255,.14);
   --destructive: #e05b67;
+  --btn-hover: #454545;
+  --primary-hover: #d4d4d4;
   --shadow-card: 0 1px 2px rgba(0,0,0,.35);
   color-scheme: dark;
 }
@@ -197,14 +201,12 @@ body {
   font-size: 14px;
   transition: background .12s ease, transform .06s ease;
 }
-.btn:hover:not(:disabled) { background: var(--accent); filter: brightness(.96); }
-body.dark .btn:hover:not(:disabled) { filter: brightness(1.12); }
+.btn:hover:not(:disabled) { background: var(--btn-hover); }
 .btn:active:not(:disabled) { transform: scale(.98); }
 .btn.primary { background: var(--primary); color: var(--primary-fg); box-shadow: var(--shadow-card); }
-.btn.primary:hover:not(:disabled) { filter: brightness(1.1); }
-body.dark .btn.primary:hover:not(:disabled) { filter: brightness(.92); }
+.btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
 .btn.danger { background: var(--destructive); color: #fff; }
-.btn.danger:hover:not(:disabled) { filter: brightness(.92); }
+.btn.danger:hover:not(:disabled) { filter: brightness(.88); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
 .fineprint { color: var(--muted-fg); font-size: 12px; line-height: 1.45; }
