@@ -178,6 +178,94 @@ let audioEl = null;
 let wavePeaks = null;
 let waveMode = null; // "wave" | "bar"
 
+// --- dithering-wave hero (home view decoration) ---
+// Bayer 8x8 ordered dithering over an animated wave field, drawn as chunky
+// pixels (pxSize 3) — the vanilla-canvas take on a DitheringShader.
+const BAYER8 = [
+   0, 32,  8, 40,  2, 34, 10, 42,
+  48, 16, 56, 24, 50, 18, 58, 26,
+  12, 44,  4, 36, 14, 46,  6, 38,
+  60, 28, 52, 20, 62, 30, 54, 22,
+   3, 35, 11, 43,  1, 33,  9, 41,
+  51, 19, 59, 27, 49, 17, 57, 25,
+  15, 47,  7, 39, 13, 45,  5, 37,
+  63, 31, 55, 23, 61, 29, 53, 21,
+];
+const hero = {
+  canvas: el("hero-canvas"),
+  off: document.createElement("canvas"),
+  img: null,
+  raf: null,
+  t: Math.random() * 100,
+  last: 0,
+};
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function heroResize() {
+  const c = hero.canvas;
+  const w = Math.max(60, Math.floor(c.clientWidth || c.parentElement.clientWidth));
+  const h = Math.max(40, Math.floor(c.clientHeight || c.parentElement.clientHeight || 132));
+  if (c.width !== w * SPD || c.height !== h * SPD) {
+    c.width = w * SPD;
+    c.height = h * SPD;
+  }
+  const sw = Math.ceil(w / 3), sh = Math.ceil(h / 3);
+  if (hero.off.width !== sw || hero.off.height !== sh) {
+    hero.off.width = sw;
+    hero.off.height = sh;
+    hero.img = hero.off.getContext("2d").createImageData(sw, sh);
+  }
+}
+
+function drawHero(ts) {
+  const { off, img } = hero;
+  if (!img) return;
+  hero.t += 0.02;
+  const t = hero.t;
+  const sw = off.width, sh = off.height;
+  const d = img.data;
+  const BACK = [0, 17, 34];       // #001122
+  const FRONT = [255, 0, 136];    // #ff0088
+  let p = 0;
+  for (let y = 0; y < sh; y++) {
+    const wob = Math.sin(y * 0.55 + t * 0.8) * 2.1;
+    for (let x = 0; x < sw; x++) {
+      const v = Math.sin(x * 0.32 + wob + t) * 0.55 + 0.5; // 0..1 wave bands
+      const thr = (BAYER8[(y % 8) * 8 + (x % 8)] + 0.5) / 64;
+      const on = v > thr;
+      d[p++] = on ? FRONT[0] : BACK[0];
+      d[p++] = on ? FRONT[1] : BACK[1];
+      d[p++] = on ? FRONT[2] : BACK[2];
+      d[p++] = 255;
+    }
+  }
+  off.getContext("2d").putImageData(img, 0, 0);
+  const c = hero.canvas;
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(off, 0, 0, off.width * 3 * SPD, off.height * 3 * SPD);
+}
+
+function heroLoop(ts) {
+  // cap ~30fps: enough smoothness for a dither pattern, kinder to the CPU
+  if (!hero.last || ts - hero.last > 33) { hero.last = ts; drawHero(ts); }
+  hero.raf = requestAnimationFrame(heroLoop);
+}
+
+function setHeroVisible(show) {
+  el("hero").classList.toggle("hidden", !show);
+  if (show) {
+    heroResize();
+    if (!reducedMotion && !hero.raf) hero.raf = requestAnimationFrame(heroLoop);
+    else if (reducedMotion) drawHero(0); // single static frame
+  } else if (hero.raf) {
+    cancelAnimationFrame(hero.raf);
+    hero.raf = null;
+    hero.last = 0;
+  }
+}
+
 function fileUrl(p) {
   return "file:///" + encodeURI(p.replace(/\\/g, "/")).replace(/#/g, "%23").replace(/%3F/g, "?");
 }
@@ -283,7 +371,7 @@ el("wave-canvas").addEventListener("click", (e) => {
   seekTo(((e.clientX - r.left) / r.width) * (audioEl.duration || 0));
 });
 
-window.addEventListener("resize", () => drawWave());
+window.addEventListener("resize", () => { drawWave(); if (hero.raf || !el("hero").classList.contains("hidden")) heroResize(); });
 
 function seekTo(sec) {
   if (!audioEl || !isFinite(audioEl.duration)) return;
@@ -403,6 +491,7 @@ function hideAllViews() {
     "transcript", "player", "file-row", "status", "engine-note", "update-banner"]) {
     el(id).classList.add("hidden");
   }
+  setHeroVisible(false);
 }
 
 // home: show the transcript we're on, or the fresh upload card
@@ -419,6 +508,7 @@ function showHomePage() {
   } else {
     el("home-hint").classList.remove("hidden");
     el("upload-card").classList.remove("hidden");
+    setHeroVisible(true);
     setActiveRail("rail-new");
   }
 }
@@ -428,6 +518,7 @@ function showNewView() {
   hideAllViews();
   el("home-hint").classList.remove("hidden");
   el("upload-card").classList.remove("hidden");
+  setHeroVisible(true);
   setActiveRail("rail-new");
 }
 
@@ -600,6 +691,7 @@ function setStatus(text) { el("status-text").textContent = text; }
 
 function beginRun(message) {
   engineRunning = true;
+  setHeroVisible(false); // stop the animation while a job is running (CPU)
   el("log").textContent = "";
   el("log").classList.remove("shown");
   el("error-panel").classList.add("hidden");
@@ -650,6 +742,7 @@ function fail(msg) {
 // --- transcript rendering (Word-style speakers + timestamps) ---
 function renderTranscript(t) {
   endRun();
+  setHeroVisible(false);
   setDeterminate(100);               // flash completion
   setTimeout(() => setDeterminate(0), 1200); // then reset for next run
   el("status").classList.add("hidden");
@@ -791,3 +884,6 @@ el("export-docx-btn").addEventListener("click", async () => {
   if (out && out.error) alert("Export failed: " + out.error);
   else if (out) alert("Saved to " + out);
 });
+
+// boot: the app opens on the home view → show the dithering-wave hero
+setHeroVisible(true);

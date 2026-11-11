@@ -182,6 +182,25 @@ body {
 
 .hint { color: var(--muted-fg); line-height: 1.5; }
 
+/* dithering-wave hero (home view) */
+.hero {
+  position: relative;
+  height: 132px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  flex: none;
+}
+.hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.hero-text {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; font-weight: 650; letter-spacing: -0.02em;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .45);
+  pointer-events: none;
+}
+
 .select {
   padding: 8px 10px;
   border: 1px solid var(--input);
