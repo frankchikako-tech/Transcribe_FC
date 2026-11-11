@@ -16,10 +16,27 @@ let cloudJob = null; // { apiKey, id?, cancelled } while an AssemblyAI run is ac
 let mainWindow = null;
 
 function createWindow() {
+  // First open: a comfortable default. After that: remember the user's
+  // own size & position (saved on close), like a proper desktop app.
+  const defaults = { width: 1180, height: 760, x: undefined, y: undefined };
+  let win = { ...defaults };
+  try {
+    const saved = readSettings().windowState;
+    if (saved && saved.width && saved.height) win = saved;
+  } catch {}
+  // never smaller than usable; never bigger than the actual screen
+  const { screen } = require("electron");
+  const disp = screen.getPrimaryDisplay().workAreaSize;
+  win.width = Math.min(Math.max(win.width, 720), disp.width - 40);
+  win.height = Math.min(Math.max(win.height, 560), disp.height - 40);
+
   mainWindow = new BrowserWindow({
-    width: 560,
-    height: 780,
-    minWidth: 420,
+    width: win.width,
+    height: win.height,
+    x: win.x,
+    y: win.y,
+    minWidth: 560,
+    minHeight: 480,
     icon: path.join(__dirname, "assets", "icon.ico"), // title bar, taskbar, Alt-Tab
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -29,6 +46,19 @@ function createWindow() {
   });
   mainWindow.loadFile(path.join(__dirname, "index.html"));
   mainWindow.setMenuBarVisibility(false);
+
+  // persist size & position when the window is being closed
+  const saveState = () => {
+    try {
+      if (!mainWindow.isMinimized() && !mainWindow.isMaximized()) {
+        const b = mainWindow.getBounds();
+        const s = readSettings();
+        s.windowState = { width: b.width, height: b.height, x: b.x, y: b.y };
+        fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+      }
+    } catch {}
+  };
+  mainWindow.on("close", saveState);
 }
 
 app.whenReady().then(() => {
