@@ -171,6 +171,15 @@ async function localTranscribe(audioPath, settings) {
 }
 
 ipcMain.handle("read-settings", () => readSettings());
+ipcMain.handle("read-audio", async (e, audioPath) => {
+  if (!fs.existsSync(audioPath)) throw new Error("File not found");
+  const stat = fs.statSync(audioPath);
+  if (stat.size > 150 * 1024 * 1024) {
+    throw new Error("TOO_LARGE"); // renderer falls back to the minimal player
+  }
+  return fs.promises.readFile(audioPath);
+});
+
 ipcMain.handle("check-updates", async () => {
   try {
     return { ok: true, ...(await checkForUpdate(app.getVersion())) };

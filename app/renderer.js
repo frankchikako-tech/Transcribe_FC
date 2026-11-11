@@ -136,6 +136,7 @@ el("upload-btn").addEventListener("click", async () => {
   el("file-name").textContent = p.split(/[\\/]/).pop();
   el("file-row").classList.remove("hidden");
   el("transcript").classList.add("hidden");
+  setupPlayer();
   updateCostEstimate();
 });
 
@@ -159,6 +160,158 @@ async function updateCostEstimate() {
   audio.addEventListener("error", () => {
     note.textContent = "☁ Fast cloud mode · ≈ $0.23 per audio-hour";
   });
+}
+
+// --- Drive-style audio player (real Web Audio waveform, zero deps) ---
+const SPD = window.devicePixelRatio || 1;
+let audioEl = null;
+let wavePeaks = null;
+let waveMode = null; // "wave" | "bar"
+
+function fileUrl(p) {
+  return "file:///" + encodeURI(p.replace(/\\/g, "/")).replace(/#/g, "%23").replace(/%3F/g, "?");
+}
+
+async function setupPlayer() {
+  stopPlayback();
+  el("player").classList.remove("hidden");
+  el("play-btn").textContent = "▶";
+  el("player-time").textContent = "0:00 / 0:00";
+  wavePeaks = null;
+  waveMode = null;
+  el("wave-canvas").classList.remove("hidden");
+  el("wave-canvas").classList.add("wave-loading");
+  el("wave-fallback").classList.add("hidden");
+  drawWave();
+
+  audioEl = new Audio();
+  audioEl.src = fileUrl(currentFile);
+  audioEl.addEventListener("ended", () => { el("play-btn").textContent = "▶"; drawWave(); });
+  audioEl.addEventListener("timeupdate", () => { updateTime(); highlightSegment(); if (audioEl.paused) drawWave(); });
+
+  // Build the waveform from real decoded audio. Long files skip the waveform
+  // and get the minimal progress bar instead (decode would eat RAM).
+  try {
+    const u8 = await window.api.readAudio(currentFile);
+    const oc = new OfflineAudioContext(1, 1, 22050);
+    const ab = await oc.decodeAudioData(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
+    const ch = ab.getChannelData(0);
+    const BARS = 400, step = Math.floor(ch.length / BARS) || 1;
+    wavePeaks = new Array(BARS);
+    for (let i = 0; i < BARS; i++) {
+      let m = 0;
+      for (let j = i * step, e = Math.min(j + step, ch.length); j < e; j += 8) {
+        const v = Math.abs(ch[j]);
+        if (v > m) m = v;
+      }
+      wavePeaks[i] = m;
+    }
+    waveMode = "wave";
+    el("wave-canvas").classList.remove("wave-loading");
+    drawWave();
+  } catch {
+    waveMode = "bar";
+    el("wave-canvas").classList.add("hidden");
+    el("wave-fallback").classList.remove("hidden");
+  }
+  updateTime();
+}
+
+function togglePlay() {
+  if (!audioEl) return;
+  if (audioEl.paused) {
+    audioEl.play();
+    el("play-btn").textContent = "❚❚";
+    tickWave();
+  } else {
+    audioEl.pause();
+    el("play-btn").textContent = "▶";
+  }
+}
+el("play-btn").addEventListener("click", togglePlay);
+
+function tickWave() {
+  if (!audioEl || audioEl.paused) return;
+  drawWave();
+  updateTime();
+  requestAnimationFrame(tickWave);
+}
+
+function drawWave() {
+  const c = el("wave-canvas");
+  const wrap = c.parentElement;
+  const w = Math.max(60, Math.floor(wrap.clientWidth * SPD));
+  if (c.width !== w) c.width = w;
+  c.height = Math.floor(56 * SPD);
+  const ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (!wavePeaks) { // loading state: thin placeholder line
+    ctx.fillStyle = "#5f6368";
+    ctx.fillRect(0, c.height / 2 - SPD, c.width, 2 * SPD);
+    return;
+  }
+  const dur = audioEl ? (audioEl.duration || 0) : 0;
+  const prog = dur ? audioEl.currentTime / dur : 0;
+  const bw = 3 * SPD, gap = 2 * SPD;
+  const n = Math.floor((c.width + gap) / (bw + gap));
+  const mid = c.height / 2;
+  for (let i = 0; i < n; i++) {
+    const p = wavePeaks[Math.floor((i / n) * wavePeaks.length)] || 0;
+    const bh = Math.max(2 * SPD, p * (c.height * 0.92));
+    ctx.fillStyle = (i / n) <= prog ? "#8ab4f8" : "#5f6368";
+    ctx.fillRect(i * (bw + gap), mid - bh / 2, bw, bh);
+  }
+  // playback cursor
+  ctx.fillStyle = "#4a9fe8";
+  ctx.fillRect(Math.min(c.width - 2 * SPD, prog * c.width), 0, 2 * SPD, c.height);
+}
+
+el("wave-canvas").addEventListener("click", (e) => {
+  if (!audioEl || !isFinite(audioEl.duration)) return;
+  const r = e.currentTarget.getBoundingClientRect();
+  seekTo(((e.clientX - r.left) / r.width) * (audioEl.duration || 0));
+});
+
+window.addEventListener("resize", () => drawWave());
+
+function seekTo(sec) {
+  if (!audioEl || !isFinite(audioEl.duration)) return;
+  audioEl.currentTime = Math.max(0, Math.min(sec, audioEl.duration - 0.05));
+  updateTime();
+  highlightSegment();
+  drawWave();
+}
+
+function stopPlayback() {
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.src = "";
+    audioEl = null;
+  }
+  wavePeaks = null;
+}
+
+function updateTime() {
+  if (!audioEl) return;
+  const d = audioEl.duration || 0, t = audioEl.currentTime || 0;
+  el("player-time").textContent = `${mmssFmt(t)} / ${mmssFmt(d)}`;
+  if (waveMode === "bar") el("wave-bar").style.width = (d ? (t / d) * 100 : 0) + "%";
+}
+
+const mmssFmt = (s) => {
+  const m = Math.floor(s / 60), x = Math.floor(s % 60);
+  return `${String(m).padStart(2, "0")}:${String(x).padStart(2, "0")}`;
+};
+
+function highlightSegment() {
+  if (!audioEl || !currentTranscript) return;
+  const t = audioEl.currentTime || 0;
+  let active = -1;
+  (currentTranscript.segments || []).forEach((seg, i) => {
+    if (t >= seg.start && t < seg.end) active = i;
+  });
+  const segs = el("segments").children;
+  for (let i = 0; i < segs.length; i++) segs[i].classList.toggle("playing", i === active);
 }
 
 // --- transcribe flow ---
@@ -287,15 +440,24 @@ function renderTranscript(t) {
     `${t.file || el("file-name").textContent} · ${mmss(t.duration_s || 0)} · ${t.speakers} speaker(s)`;
   const segs = el("segments");
   segs.innerHTML = "";
+  const palette = ["#0f6cbd", "#8767d3", "#0e7a4d", "#c25e00", "#c23b3b", "#5b6bd3"];
   for (const seg of t.segments || []) {
     const div = document.createElement("div");
     div.className = "segment";
+    const num = String((seg.speaker.match(/\d+/) || ["1"])[0]);
+    const color = palette[(parseInt(num, 10) - 1 + palette.length) % palette.length];
     div.innerHTML =
-      `<span class="seg-speaker">${seg.speaker}</span>` +
+      `<span class="seg-chip" style="background:${color}">${num}</span>` +
+      `<span class="seg-speaker" style="color:${color}">${seg.speaker}</span>` +
       `<span class="seg-time">${mmss(seg.start)}</span>` +
       `<span class="seg-text"></span>` +
       `<span class="seg-actions"><button title="Copy text">＋</button></span>`;
     div.querySelector(".seg-text").textContent = seg.text;
+    // click anywhere on the segment → seek the player there (Word-like)
+    div.addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") return;
+      seekTo(seg.start);
+    });
     div.querySelector("button").addEventListener("click", () => {
       navigator.clipboard.writeText(seg.text);
       div.querySelector("button").textContent = "✔";

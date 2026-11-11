@@ -8,6 +8,7 @@
 <body>
   <div class="pane">
     <header class="pane-title">
+      <img src="assets/icon-32.png" alt="" />
       <span>Transcribe</span>
       <button id="settings-btn" class="icon-btn" title="Settings">⚙</button>
     </header>
@@ -88,6 +89,16 @@
         <button id="cancel-btn" class="btn danger hidden">Cancel</button>
       </div>
       <div id="engine-note" class="fineprint hidden"></div>
+
+      <!-- Drive-style audio player -->
+      <div id="player" class="player hidden">
+        <button id="play-btn" class="play-btn" title="Play / pause">▶</button>
+        <div class="wave-wrap">
+          <canvas id="wave-canvas"></canvas>
+          <div id="wave-fallback" class="wave-fallback hidden"><div class="wave-track"><div id="wave-bar"></div></div></div>
+        </div>
+        <div id="player-time" class="player-time">0:00 / 0:00</div>
+      </div>
 
       <!-- status -->
       <section id="status" class="status hidden">
