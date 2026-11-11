@@ -3,8 +3,11 @@
 > Audio transcription app for Windows, modeled after Microsoft Word's "Transcribe" pane
 > (upload/record audio → diarized, timestamped, speaker-labeled transcript → exports).
 >
-> **Engine: 100% free & local** — no accounts, no cloud calls, audio never leaves this machine.
-> Azure fast transcription is planned later only as an optional quality/speed toggle for long files.
+> **Distribution model: cloud-first** — `app\dist\Transcribe-Setup-<ver>.exe` (NSIS, per-user,
+> no admin) published to `github.com/frankchikako-tech/Transcribe_FC` releases; transcription
+> runs on AssemblyAI (`universal-3-5-pro`, ~$0.23/hr, user's own key). The local engine
+> (faster-whisper + pyannote, `venv\`, ~4GB) lives only on this dev machine and is planned
+> as a future offline edition / optional add-on pack.
 
 ---
 
@@ -122,7 +125,11 @@ pipeline_kwargs["use_auth_token" if "use_auth_token" in params else "token"] = H
   `CLOUD upload <pct>` (0–100), `CLOUD status queued|processing` — renderer maps to
   Word's Uploading → Transcribing → Fetching progress flow
 - Cost estimate shown on file pick (duration read via `Audio` metadata, $0.23/hr)
-- Key stored in `%APPDATA%\transcriber-app\settings.json` as `aaiKey`; default provider `local`
+- Key stored in `%APPDATA%\transcriber-app\settings.json` as `aaiKey`; cloud is the only
+  provider in the packaged build. `main.js` transcribe dispatcher: local engine is used
+  **only if the bundled python.exe actually exists** on the machine (dev checkout), else it
+  auto-falls back to cloud with a log line — this fixed the installed-app ENOENT (v1.0.3).
+  Dev + installed app share the same settings.json (same userData dir) — historical source of bugs.
 - Control test (AssemblyAI's own multi-speaker sample, 201s): **4 speakers split correctly**
   (9 utterances, alternating A/B/C/D) via `universal-3-5-pro` → mapping/pipe verified sound
 - Known quirk: on our synthetic TTS test file, AAI diarization merges 1 speaker while local
@@ -136,10 +143,25 @@ Transcription stage: **10 segments, 01:34 audio in ~01:10–01:33** on CPU (slow
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Reverse-engineer Word Transcribe locally | ✅ done (findings file above) |
-| 1 | Local engine proof: audio → diarized transcript (.txt/.srt/.json) | 🔄 in progress (diarization stage) |
-| 2 | Desktop app shell (Word-pane UX): upload/record/progress/cancel; engine as background worker | pending |
-| 3 | Word-parity transcript UI: speaker rename, 4 "Add to document" modes, exports (.docx/.txt/.srt), playback | pending |
-| 4 | Long files: chunked processing, resume, sleep-prevention + optional AssemblyAI fast-transcription provider | 🔄 fast mode built & wired (cloud.js + provider dropdown) — TTS-file diarization quirk under control-test |
+| 1 | Local engine proof: audio → diarized transcript (.txt/.srt/.json) | ✅ done (run 12) |
+| 2 | Desktop app shell (Word-pane UX): upload/record/progress/cancel; engine as background worker | ✅ done |
+| 2b | Cloud distribution: AssemblyAI engine (cloud.js), NSIS installer, GitHub Releases, in-app update checker (update.js), ENOENT cloud-fallback fix | ✅ done (v1.0.3) |
+| 2c | Drive-style waveform player, click-to-seek transcript, speaker color chips, Fluent UI polish | ✅ built (v1.0.4, cb3851d) — release pending |
+| 3 | Word-parity transcript UI: speaker rename, 4 "Add to document" modes, .docx export, "Start recording" | pending |
+| 3b | One-line terminal install command for README | discussed, not built |
+| 4 | Long files: chunked processing, resume, sleep-prevention + optional local-engine add-on pack | pending |
+
+## 7b. Release ritual (established v1.0.2+)
+
+1. Bump `app/package.json` version (+ README badge/filename) → commit & push
+2. `npm run dist` in `app\` → `app\dist\Transcribe-Setup-<ver>.exe` (~83.3MB), boot-test `dist\win-unpacked\Transcribe.exe`
+3. Publish via REST: `git credential fill` → PAT (never printed) → `POST /repos/…/releases`
+   with **`- `-bulleted body** (parseNotes() renders these bullets in the in-app update banner)
+   → `curl.exe --data-binary "@exe"` to `uploads.github.com/…/assets?name=…` (expect 201)
+4. Verify `releases/latest/download/<file>` HEAD → 200
+
+Users on v1.0.2+ get the update banner automatically (daily silent check, 24h rate limit,
+`skippedVersion` in settings). v1.0.0/1.0.1 users must download the newer installer manually.
 
 ## 8. Notes & cautions
 
