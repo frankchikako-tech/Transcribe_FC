@@ -12,14 +12,14 @@
     <nav class="rail" aria-label="Primary">
       <img class="rail-logo" src="assets/icon-32.png" alt="Transcribe" draggable="false" />
       <div class="rail-group">
-        <button id="rail-new" class="rail-btn" title="New transcription" aria-label="New transcription">＋</button>
-        <button id="rail-history" class="rail-btn" title="Transcript history" aria-label="Transcript history">🗒</button>
-        <button id="rail-record" class="rail-btn" title="Start recording (coming soon)" disabled>🎙</button>
+        <button id="rail-new" class="rail-btn" title="New transcription" aria-label="New transcription"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
+        <button id="rail-history" class="rail-btn" title="Transcript history" aria-label="Transcript history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></button>
+        <button id="rail-record" class="rail-btn" title="Start recording (coming soon)" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg></button>
       </div>
       <div class="rail-group rail-bottom">
-        <button id="rail-theme" class="rail-btn" title="Toggle dark / light" aria-label="Toggle theme">🌙</button>
-        <button id="rail-help" class="rail-btn" title="Help" aria-label="Help">?</button>
-        <button id="settings-btn" class="rail-btn" title="Settings" aria-label="Settings">⚙</button>
+        <button id="rail-theme" class="rail-btn" title="Toggle dark / light" aria-label="Toggle theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg></button>
+        <button id="rail-help" class="rail-btn" title="Help" aria-label="Help"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg></button>
+        <button id="settings-btn" class="rail-btn" title="Settings" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
       </div>
 
       <!-- help popover (anchored next to the rail, Atomic-Chat style) -->
@@ -35,7 +35,7 @@
     <aside id="sidebar" class="side">
       <div class="side-head">
         <h2>Transcripts</h2>
-        <button id="side-close" class="icon-btn" title="Hide panel">‹</button>
+        <button id="side-close" class="icon-btn" title="Hide panel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
       </div>
       <ul id="history-list" class="history-list" aria-label="Saved transcripts"></ul>
       <div id="history-empty" class="history-empty">No transcripts yet.<br />Upload audio to make your first one.</div>
@@ -49,7 +49,7 @@
         <section id="update-banner" class="update-banner hidden">
           <div class="update-title-row">
             <span id="update-title"></span>
-            <button id="update-skip" class="icon-btn" title="Skip this version">×</button>
+            <button id="update-skip" class="icon-btn" title="Skip this version"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
           </div>
           <ul id="update-notes" class="update-notes"></ul>
           <div class="update-actions">
@@ -77,32 +77,48 @@
           <small><a href="#" id="welcome-skip">Skip — I'll set it up later</a></small>
         </section>
 
-        <!-- settings panel (hidden by default) -->
-        <section id="settings-panel" class="settings hidden">
-          <select id="engine-select" class="hidden">
-            <option value="assemblyai" selected>AssemblyAI cloud</option>
-          </select>
-          <label>AssemblyAI API key</label>
-          <input id="aai-key" type="password" placeholder="paste your API key" />
-          <small class="fineprint">Get a free key at
-            <a href="#" id="aai-link">assemblyai.com</a> → Dashboard → API Keys. Stored only on this PC.</small>
-          <input id="hf-token" type="hidden" />
-          <label>Max speakers</label>
-          <select id="max-speakers">
-            <option value="auto" selected>Auto (detect)</option>
-            <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
-          </select>
-          <label class="check-row">
-            <input type="checkbox" id="disfluencies" checked />
-            Include filler words (um, uh) — cloud engine
-          </label>
-          <div class="settings-actions">
-            <button id="save-settings" class="btn">Save settings</button>
-            <button id="check-updates-btn" class="btn">Check for updates now</button>
+        <!-- settings page (full page, opened from the rail) -->
+        <section id="settings-panel" class="settings-page hidden">
+          <div class="page-head">
+            <button id="settings-back" class="icon-btn" title="Back">‹</button>
+            <h2>Settings</h2>
+            <span id="app-version" class="meta"></span>
           </div>
-          <small id="update-note" class="fineprint"></small>
-          <small class="fineprint">Audio is uploaded to AssemblyAI for GPU-fast transcription,
-          then the result comes back here. Your key is stored only in this app's local data.</small>
+
+          <div class="settings-card">
+            <h3>API key</h3>
+            <label>AssemblyAI API key</label>
+            <input id="aai-key" type="password" placeholder="paste your API key" />
+            <small class="fineprint">Get a free key at
+              <a href="#" id="aai-link">assemblyai.com</a> → Dashboard → API Keys. Stored only on this PC.</small>
+            <input id="hf-token" type="hidden" />
+            <input id="engine-select" type="hidden" value="assemblyai" />
+            <small id="save-note" class="fineprint"></small>
+          </div>
+
+          <div class="settings-card">
+            <h3>Transcription</h3>
+            <label>Max speakers</label>
+            <select id="max-speakers">
+              <option value="auto" selected>Auto (detect)</option>
+              <option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option>
+            </select>
+            <label class="check-row">
+              <input type="checkbox" id="disfluencies" checked />
+              Keep filler words (um, uh) in transcripts
+            </label>
+          </div>
+
+          <div class="settings-card">
+            <h3>Updates</h3>
+            <div class="settings-actions">
+              <button id="save-settings" class="btn primary">Save changes</button>
+              <button id="check-updates-btn" class="btn">Check for updates now</button>
+            </div>
+            <small id="update-note" class="fineprint"></small>
+            <small class="fineprint">The app also checks quietly once a day and shows a banner when a new version is out.
+            Audio is uploaded to AssemblyAI for GPU-fast transcription; your key stays on this PC.</small>
+          </div>
         </section>
 
         <!-- upload card -->

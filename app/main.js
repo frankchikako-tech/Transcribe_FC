@@ -201,6 +201,7 @@ async function localTranscribe(audioPath, settings) {
 }
 
 ipcMain.handle("read-settings", () => readSettings());
+ipcMain.handle("app-version", () => app.getVersion());
 ipcMain.handle("read-audio", async (e, audioPath) => {
   if (!fs.existsSync(audioPath)) throw new Error("File not found");
   const stat = fs.statSync(audioPath);

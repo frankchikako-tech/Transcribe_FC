@@ -39,17 +39,23 @@ el("welcome-skip").addEventListener("click", async (e) => {
   el("welcome").classList.add("hidden");
 });
 
-// --- settings UI ---
-el("settings-btn").addEventListener("click", async () => {
-  const panel = el("settings-panel");
-  panel.classList.toggle("hidden");
-  if (!panel.classList.contains("hidden")) {
-    const s = await window.api.readSettings();
-    if (s.provider) el("engine-select").value = s.provider;
-    if (s.aaiKey) el("aai-key").value = s.aaiKey;
-    if (s.hfToken) el("hf-token").value = s.hfToken;
-    if (s.maxSpeakers) el("max-speakers").value = s.maxSpeakers;
-  }
+// --- settings page (full page, opened from the rail) ---
+async function showSettingsPage() {
+  hideAllViews();
+  el("settings-panel").classList.remove("hidden");
+  setActiveRail("settings-btn");
+  const s = await window.api.readSettings();
+  if (s.provider) el("engine-select").value = s.provider;
+  if (s.aaiKey) el("aai-key").value = s.aaiKey;
+  if (s.hfToken) el("hf-token").value = s.hfToken;
+  if (s.maxSpeakers) el("max-speakers").value = s.maxSpeakers;
+  try { el("app-version").textContent = "v" + (await window.api.appVersion()); } catch {}
+}
+
+el("settings-btn").addEventListener("click", () => { el("help-pop").classList.add("hidden"); showSettingsPage(); });
+el("settings-back").addEventListener("click", () => {
+  showHomePage();
+  setActiveRail(currentTranscript ? "" : "rail-new");
 });
 const aaiLink = el("aai-link");
 if (aaiLink) aaiLink.addEventListener("click", (e) => {
@@ -65,7 +71,8 @@ el("save-settings").addEventListener("click", async () => {
     disfluencies: el("disfluencies").checked,
     welcomed: true,
   });
-  el("settings-panel").classList.add("hidden");
+  el("save-note").textContent = "Saved ✓";
+  setTimeout(() => (el("save-note").textContent = ""), 2500);
 });
 
 // --- update check (GitHub releases) ---
@@ -137,6 +144,7 @@ el("upload-btn").addEventListener("click", async () => {
   currentFile = p;
   el("file-name").textContent = p.split(/[\\/]/).pop();
   el("file-row").classList.remove("hidden");
+  el("start-btn").classList.remove("hidden"); // restore if a history view hid it
   el("transcript").classList.add("hidden");
   setupPlayer();
   updateCostEstimate();
@@ -377,7 +385,7 @@ async function openHistoryItem(id, audioPath) {
   const t = r.item.transcript;
   currentTranscript = t;
   currentFile = audioPath || null;
-  showMainView();
+  hideAllViews();
   renderTranscript(t);
   if (audioPath) {
     el("file-name").textContent = t.file || audioPath.split(/[\\/]/).pop();
@@ -388,28 +396,45 @@ async function openHistoryItem(id, audioPath) {
   }
 }
 
-// --- rail + shell ---
-function showMainView() {
-  el("settings-panel").classList.add("hidden");
-  el("welcome").classList.add("hidden");
-  el("home-hint").classList.add("hidden");
-  el("upload-card").classList.add("hidden");
-  el("update-banner").classList.add("hidden");
+// --- rail + shell: page switching ---
+function hideAllViews() {
+  for (const id of ["settings-panel", "welcome", "home-hint", "upload-card",
+    "transcript", "player", "file-row", "status", "engine-note", "update-banner"]) {
+    el(id).classList.add("hidden");
+  }
 }
 
-el("rail-new").addEventListener("click", () => {
-  showMainView();
-  stopPlayback();
-  currentTranscript = null;
-  currentFile = null;
-  el("transcript").classList.add("hidden");
-  el("player").classList.add("hidden");
-  el("file-row").classList.add("hidden");
-  el("status").classList.add("hidden");
-  el("engine-note").classList.add("hidden");
+// home: show the transcript we're on, or the fresh upload card
+function showHomePage() {
+  hideAllViews();
+  if (currentTranscript) {
+    el("transcript").classList.remove("hidden");
+    el("player").classList.remove("hidden");
+    if (currentFile) {
+      el("file-row").classList.remove("hidden");
+      el("start-btn").classList.add("hidden");
+      el("cancel-btn").classList.add("hidden");
+    }
+  } else {
+    el("home-hint").classList.remove("hidden");
+    el("upload-card").classList.remove("hidden");
+    setActiveRail("rail-new");
+  }
+}
+
+// fresh upload state (＋ button)
+function showNewView() {
+  hideAllViews();
   el("home-hint").classList.remove("hidden");
   el("upload-card").classList.remove("hidden");
   setActiveRail("rail-new");
+}
+
+el("rail-new").addEventListener("click", () => {
+  stopPlayback();
+  currentTranscript = null;
+  currentFile = null;
+  showNewView();
 });
 
 function setActiveRail(id) {
@@ -425,9 +450,14 @@ el("rail-history").addEventListener("click", () => {
 });
 
 // theme (Atomic Chat's neutral palette, two-sided)
+// Lucide moon / sun icons for the theme rail button (matches index.html markup style)
+const LUCIDE_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>';
+const LUCIDE_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>';
+
 async function applyTheme(theme) {
   document.body.classList.toggle("dark", theme === "dark");
-  el("rail-theme").textContent = theme === "dark" ? "☀️" : "🌙";
+  // dark mode → sun (click to go light); light mode → moon (click to go dark)
+  el("rail-theme").innerHTML = theme === "dark" ? LUCIDE_SUN : LUCIDE_MOON;
   el("rail-theme").title = theme === "dark" ? "Switch to light" : "Switch to dark";
 }
 
@@ -537,10 +567,14 @@ function stopCrawl() {
 
 function getStatusText() { return el("status-text").textContent; }
 
+function setStatus(text) { el("status-text").textContent = text; }
+
 function beginRun(message) {
   engineRunning = true;
   el("log").textContent = "";
-  el("log").style.display = "none";
+  el("log").classList.remove("shown");
+  el("error-panel").classList.add("hidden");
+  el("status-text").classList.remove("hidden");
   el("status").classList.remove("hidden");
   el("status-text").textContent = message;
   setIndeterminate();          // Word-style sweep starts immediately
@@ -556,9 +590,31 @@ function endRun() {
   el("upload-btn").disabled = false;
 }
 
+// Map a raw engine error to a Word-style friendly message
+function friendlyError(msg) {
+  const m = String(msg || "").toLowerCase();
+  if (m.includes("401") || m.includes("key rejected") || m.includes("unauthorized") ||
+      m.includes("invalid api key") || m.includes("api key")) {
+    return "Your AssemblyAI API key was rejected. Check it in Settings, then try again.";
+  }
+  if (m.includes("http 5") || m.includes("socket") || m.includes("econn") ||
+      m.includes("etimedout") || m.includes("enotfound") || m.includes("network") ||
+      m.includes("connection") || m.includes("upload failed") || m.includes("fetch")) {
+    return "Check your internet connection, then try again.";
+  }
+  return "We ran into a problem transcribing your file.";
+}
+
 function fail(msg) {
   endRun();
-  el("status-text").textContent = "Failed: " + msg;
+  progressWrap().classList.add("invisible");
+  progressWrap().classList.remove("indeterminate");
+  el("status-text").classList.add("hidden");
+  el("error-panel").classList.remove("hidden");
+  el("error-msg").textContent = friendlyError(msg);
+  // details buffer: raw error on top of whatever the engine logged
+  el("log").textContent = String(msg || "") + (el("log").textContent ? "\n\n" + el("log").textContent : "");
+  el("log").classList.remove("shown");
 }
 
 // --- transcript rendering (Word-style speakers + timestamps) ---

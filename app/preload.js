@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("api", {
   cancel: () => ipcRenderer.invoke("cancel"),
   export: (args) => ipcRenderer.invoke("export-transcript", args),
   readSettings: () => ipcRenderer.invoke("read-settings"),
+  appVersion: () => ipcRenderer.invoke("app-version"),
   saveSettings: (s) => ipcRenderer.invoke("save-settings", s),
   onEngineLog: (cb) => ipcRenderer.on("engine-log", (_e, text) => cb(text)),
   openExternal: (url) => ipcRenderer.invoke("open-external", url),

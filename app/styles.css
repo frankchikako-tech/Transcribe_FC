@@ -94,6 +94,7 @@ body {
   cursor: pointer;
   transition: background .12s ease, color .12s ease;
 }
+.rail-btn svg { width: 21px; height: 21px; } /* Lucide, bold stroke */
 .rail-btn:hover:not(:disabled) { background: rgba(128,128,128,.08); color: var(--fg); }
 .rail-btn.active { background: rgba(128,128,128,.15); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
 .rail-btn:disabled { opacity: .35; cursor: not-allowed; }
@@ -173,7 +174,9 @@ body {
 .icon-btn {
   border: none; background: none; font-size: 15px; cursor: pointer;
   width: 30px; height: 30px; border-radius: 8px; color: var(--muted-fg);
+  display: inline-flex; align-items: center; justify-content: center;
 }
+.icon-btn svg { width: 18px; height: 18px; }
 .icon-btn:hover { background: rgba(128,128,128,.08); color: var(--fg); }
 
 .hint { color: var(--muted-fg); line-height: 1.5; }
@@ -272,6 +275,30 @@ body {
 .welcome-title { font-size: 16px; font-weight: 600; }
 .welcome-steps { padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: var(--muted-fg); }
 .welcome a { color: var(--muted-fg); font-weight: 600; }
+
+/* ================= settings page ================= */
+.settings-page { display: flex; flex-direction: column; gap: 14px; max-width: 620px; }
+.page-head {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 2px;
+}
+.page-head h2 { font-size: 20px; font-weight: 600; }
+.page-head .meta { margin-left: auto; }
+.settings-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.settings-card h3 { font-size: 14px; font-weight: 600; color: var(--muted-fg); text-transform: uppercase; letter-spacing: .4px; font-size: 12px; }
+.settings-card input[type="password"], .settings-card select { padding: 9px; border: 1px solid var(--input); border-radius: 8px; background: var(--bg); color: var(--fg); }
+.settings-card input[type="password"]:focus, .settings-card select:focus { outline: 2px solid rgba(128,128,128,.3); border-color: var(--muted-fg); }
+.settings-card label { font-weight: 500; font-size: 13.5px; }
+.check-row { display: flex; align-items: center; gap: 8px; font-weight: 400; }
+.check-row input { width: 16px; height: 16px; padding: 0; accent-color: var(--primary); }
+.settings-actions { display: flex; gap: 8px; }
 
 .update-banner {
   border: 1px solid var(--border);
