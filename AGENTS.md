@@ -165,6 +165,16 @@ Users on v1.0.2+ get the update banner automatically (daily silent check, 24h ra
 
 ## 8. Notes & cautions
 
+- **Single-instance lock (v1.1.8):** `main.js` calls `app.requestSingleInstanceLock()`; a
+  second launch focuses the existing window instead of stacking another Electron process tree.
+  This fixed a "won't launch / blank window" case where a hung instance left 4 orphan
+  `Transcribe.exe` processes behind (recover: `taskkill /IM Transcribe.exe /F`, then relaunch;
+  if still blank it's GPU — launch with `--disable-gpu` and/or clear the `GPUCache` folder).
+- **API key encrypted at rest (v1.1.8):** `aaiKey` is stored via Electron `safeStorage` (DPAPI
+  on Windows), tagged `enc:v1:`. `readSettings()` decrypts; all writes go through `writeSettings()`
+  which re-encrypts. Legacy plaintext keys still load and are migrated on next save. Caveat: a
+  pre-1.1.8 build sharing the same `userData` can't read an encrypted key — don't run old + new
+  builds against the same settings.json.
 - The HF token is pasted in chat and written into run commands; **rotate it** at
   https://huggingface.co/settings/tokens when the app ships (never hardcode in the final app;
   store in app config with same perms).

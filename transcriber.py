@@ -170,11 +170,12 @@ def main() -> None:
     lines = [f"# Transcript: {src.name}", f"# Length: {mmss(audio_duration)} | Speakers: {len(speakers)}", ""]
     prev = None
     for seg in merged:
-        header = f"\n[{mmss(seg['start'])}] {seg['speaker']}:"  # new line when speaker changes
+        if prev is not None and prev != seg["speaker"]:
+            lines.append("")  # blank line between speaker turns
         if prev == seg["speaker"]:
             lines.append(f"[{mmss(seg['start'])}] {seg['text']}")
         else:
-            lines.append(header + f" {seg['text']}" if False else f"{seg['speaker']} [{mmss(seg['start'])}]: {seg['text']}")
+            lines.append(f"{seg['speaker']} [{mmss(seg['start'])}]: {seg['text']}")
         prev = seg["speaker"]
     txt_path.write_text("\n".join(lines), encoding="utf-8")
 

@@ -1,6 +1,6 @@
 // Transcriber App — main process (Electron)
 // Spawns the Phase 1 python engine and pipes progress to the renderer.
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, dialog, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { spawn } = require("child_process");
@@ -14,6 +14,30 @@ const ENGINE = path.join(PROJECT_ROOT, "transcriber.py");
 let engineProc = null;
 let cloudJob = null; // { apiKey, id?, cancelled } while an AssemblyAI run is active
 let mainWindow = null;
+
+// Safe log to the renderer — a hung/closed window must never crash a running job.
+function sendLog(text) {
+  try {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("engine-log", text);
+    }
+  } catch {}
+}
+
+// Single-instance lock: a second launch focuses the existing window instead of
+// stacking a fresh (and possibly blank/hung) Electron process tree on top.
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
 
 function createWindow() {
   // First open: a comfortable default. After that: remember the user's
@@ -47,6 +71,14 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, "index.html"));
   mainWindow.setMenuBarVisibility(false);
 
+  // Harden navigation: this app only ever shows its own local UI. Block any
+  // attempt to navigate the window elsewhere or open new windows in-app;
+  // external links go out through the vetted "open-external" IPC (https only).
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-navigate", (e) => e.preventDefault());
+
+  mainWindow.on("closed", () => { mainWindow = null; });
+
   // persist size & position when the window is being closed
   const saveState = () => {
     try {
@@ -54,14 +86,15 @@ function createWindow() {
         const b = mainWindow.getBounds();
         const s = readSettings();
         s.windowState = { width: b.width, height: b.height, x: b.x, y: b.y };
-        fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+        writeSettings(s);
       }
     } catch {}
   };
   mainWindow.on("close", saveState);
 }
 
-app.whenReady().then(() => {
+// Only the primary instance opens a window; a second launch quit above.
+if (gotLock) app.whenReady().then(() => {
   // proper taskbar identity (groups under our icon instead of default electron.exe)
   app.setAppUserModelId("com.frank.transcriber");
   createWindow();
@@ -114,10 +147,7 @@ ipcMain.handle("transcribe", async (e, audioPath) => {
   }
   if (!hasLocalEngine && settings.provider === "local") {
     // settings came from a dev checkout sharing this userData — auto-heal + inform
-    mainWindow.webContents.send(
-      "engine-log",
-      "Local engine isn't included in this install — using fast cloud mode.\n"
-    );
+    sendLog("Local engine isn't included in this install — using fast cloud mode.\n");
   }
   if (!settings.aaiKey) {
     return { ok: false, error: "No API key yet. Open ⚙ settings and paste your AssemblyAI key." };
@@ -136,13 +166,13 @@ async function cloudTranscribe(audioPath, settings) {
     disfluencies: settings.disfluencies !== false, // default ON
     onEvent: (ev) => {
       if (ev.type === "upload-progress") {
-        mainWindow.webContents.send("engine-log", `CLOUD upload ${ev.pct.toFixed(1)}\n`);
+        sendLog(`CLOUD upload ${ev.pct.toFixed(1)}\n`);
       } else if (ev.type === "stage") {
-        mainWindow.webContents.send("engine-log", `CLOUD stage ${ev.stage}\n`);
+        sendLog(`CLOUD stage ${ev.stage}\n`);
       } else if (ev.type === "status") {
-        mainWindow.webContents.send("engine-log", `CLOUD status ${ev.status}\n`);
+        sendLog(`CLOUD status ${ev.status}\n`);
       } else if (ev.type === "log") {
-        mainWindow.webContents.send("engine-log", ev.text);
+        sendLog(ev.text);
       }
     },
     isCancelled: () => !cloudJob || cloudJob.cancelled,
@@ -170,12 +200,10 @@ async function localTranscribe(audioPath, settings) {
     env,
   });
 
-  engineProc.stdout.on("data", (d) => {
-    mainWindow.webContents.send("engine-log", d.toString());
-  });
+  engineProc.stdout.on("data", (d) => sendLog(d.toString()));
   engineProc.stderr.on("data", (d) => {
     // python warnings arrive on stderr; surface them as log lines too
-    mainWindow.webContents.send("engine-log", d.toString());
+    sendLog(d.toString());
   });
 
   const result = await new Promise((resolve) => {
@@ -228,21 +256,55 @@ ipcMain.handle("open-external", (e, url) => {
   return false;
 });
 ipcMain.handle("save-settings", (e, obj) => {
-  const file = settingsFile();
-  fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(obj, null, 2));
+  writeSettings(obj);
   return true;
 });
 
 function settingsFile() {
   return path.join(app.getPath("userData"), "settings.json");
 }
+
+// The AssemblyAI key is encrypted at rest with the OS keystore (DPAPI on
+// Windows) via Electron safeStorage, tagged so we can tell it apart from a
+// legacy plaintext key. Everything degrades gracefully: if encryption isn't
+// available, or a blob can't be decrypted, we fall back to plaintext rather
+// than ever locking the user out of their own key.
+const ENC_PREFIX = "enc:v1:";
+function encryptKey(plain) {
+  try {
+    if (plain && safeStorage.isEncryptionAvailable()) {
+      return ENC_PREFIX + safeStorage.encryptString(String(plain)).toString("base64");
+    }
+  } catch {}
+  return plain || "";
+}
+function decryptKey(stored) {
+  if (typeof stored !== "string" || !stored.startsWith(ENC_PREFIX)) return stored || "";
+  try {
+    return safeStorage.decryptString(Buffer.from(stored.slice(ENC_PREFIX.length), "base64"));
+  } catch {
+    return ""; // unreadable (e.g. restored on a different machine) — treat as unset
+  }
+}
+
+// Read settings with the key decrypted for in-process use and the renderer.
 function readSettings() {
   try {
-    return JSON.parse(fs.readFileSync(settingsFile(), "utf8"));
+    const s = JSON.parse(fs.readFileSync(settingsFile(), "utf8"));
+    if (s && typeof s.aaiKey === "string") s.aaiKey = decryptKey(s.aaiKey);
+    return s || {};
   } catch {
     return {};
   }
+}
+
+// Single write path — always re-encrypts the key so no caller can accidentally
+// persist it in plaintext (window-state saves, history updates, etc.).
+function writeSettings(obj) {
+  const out = { ...obj };
+  if (typeof out.aaiKey === "string") out.aaiKey = encryptKey(out.aaiKey);
+  fs.mkdirSync(path.dirname(settingsFile()), { recursive: true });
+  fs.writeFileSync(settingsFile(), JSON.stringify(out, null, 2));
 }
 
 // ---- transcript history: one JSON file per transcript + an index in settings ----
@@ -271,7 +333,7 @@ ipcMain.handle("save-history", (e, item) => {
     // drop dead audio references so sidebar badges stay honest
     for (const h of list) h.hasAudio = fs.existsSync(h.audioPath || "");
     s.history = list.slice(0, HISTORY_CAP);
-    fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+    writeSettings(s);
     return { ok: true, list: s.history };
   } catch (err) {
     return { ok: false, error: String(err.message || err) };
@@ -293,14 +355,48 @@ ipcMain.handle("delete-history", (e, id) => {
     fs.rmSync(path.join(historyDir(), path.basename(String(id)) + ".json"), { force: true });
     const s = readSettings();
     s.history = (s.history || []).filter((h) => h.id !== id);
-    fs.writeFileSync(settingsFile(), JSON.stringify(s, null, 2));
+    writeSettings(s);
     return { ok: true, list: s.history };
   } catch (err) {
     return { ok: false, error: String(err.message || err) };
   }
 });
 
-ipcMain.handle("export-transcript", async (e, { markdown, defaultName }) => {
+// --- transcript export formatters (the saved file must match its extension) ---
+const pad2 = (n) => String(n).padStart(2, "0");
+const clock = (s) => `${pad2(Math.floor(s / 60))}:${pad2(Math.round(s % 60))}`;
+const srtClock = (s) => {
+  const ms = Math.round(s * 1000);
+  return `${pad2(Math.floor(ms / 3600000))}:${pad2(Math.floor((ms % 3600000) / 60000))}:${pad2(Math.floor((ms % 60000) / 1000))},${String(ms % 1000).padStart(3, "0")}`;
+};
+function buildMarkdown(title, duration, speakers, segments) {
+  const lines = [`# Transcript: ${title}`, `# Duration: ${clock(duration || 0)} · Speakers: ${speakers || 0}`, ""];
+  let last = null;
+  for (const seg of segments) {
+    if (seg.speaker !== last) lines.push("");
+    lines.push(`${seg.speaker} [${clock(seg.start)}]: ${seg.text}`);
+    last = seg.speaker;
+  }
+  return lines.join("\n");
+}
+function buildText(title, duration, speakers, segments) {
+  // same body as markdown but without the "#"/Markdown flavouring
+  const lines = [`Transcript: ${title}`, `Duration: ${clock(duration || 0)} · Speakers: ${speakers || 0}`, ""];
+  let last = null;
+  for (const seg of segments) {
+    if (seg.speaker !== last) lines.push("");
+    lines.push(`${seg.speaker} [${clock(seg.start)}]: ${seg.text}`);
+    last = seg.speaker;
+  }
+  return lines.join("\n");
+}
+function buildSrt(segments) {
+  return segments
+    .map((seg, i) => `${i + 1}\n${srtClock(seg.start)} --> ${srtClock(seg.end)}\n${seg.speaker}: ${seg.text}\n`)
+    .join("\n");
+}
+
+ipcMain.handle("export-transcript", async (e, { segments, title, duration, speakers, markdown, defaultName }) => {
   const res = await dialog.showSaveDialog(mainWindow, {
     title: "Save transcript",
     defaultPath: defaultName || "transcript.md",
@@ -311,7 +407,14 @@ ipcMain.handle("export-transcript", async (e, { markdown, defaultName }) => {
     ],
   });
   if (res.canceled || !res.filePath) return null;
-  fs.writeFileSync(res.filePath, markdown, "utf8");
+  const segs = Array.isArray(segments) ? segments : null;
+  const ext = path.extname(res.filePath).toLowerCase();
+  let content;
+  if (segs && ext === ".srt") content = buildSrt(segs);
+  else if (segs && ext === ".txt") content = buildText(title, duration, speakers, segs);
+  else if (segs) content = buildMarkdown(title, duration, speakers, segs);
+  else content = markdown || ""; // fallback: pre-built string (older callers)
+  fs.writeFileSync(res.filePath, content, "utf8");
   return res.filePath;
 });
 
