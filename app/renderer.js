@@ -160,7 +160,7 @@ async function updateCostEstimate() {
   note.classList.remove("hidden");
   const audio = new Audio();
   audio.preload = "metadata";
-  audio.src = "file:///" + encodeURI(currentFile.replace(/\\/g, "/")).replace(/#/g, "%23").replace(/%3F/g, "?");
+  audio.src = fileUrl(currentFile);
   audio.addEventListener("loadedmetadata", () => {
     const hrs = audio.duration / 3600;
     const cost = (hrs * 0.23).toFixed(2);
@@ -765,10 +765,12 @@ function renderTranscript(t) {
     const color = palette[(parseInt(num, 10) - 1 + palette.length) % palette.length];
     div.innerHTML =
       `<span class="seg-chip" style="background:${color}">${num}</span>` +
-      `<span class="seg-speaker" style="color:${color}">${seg.speaker}</span>` +
+      `<span class="seg-speaker" style="color:${color}"></span>` +
       `<span class="seg-time">${mmss(seg.start)}</span>` +
       `<span class="seg-text"></span>` +
       `<span class="seg-actions"><button title="Copy text">＋</button></span>`;
+    // speaker + text set via textContent so transcript content can never inject markup
+    div.querySelector(".seg-speaker").textContent = seg.speaker;
     div.querySelector(".seg-text").textContent = cleanDash(seg.text);
     // click anywhere on the segment → seek the player there (Word-like)
     div.addEventListener("click", (e) => {
@@ -847,23 +849,15 @@ function suggestedExportName(transcript, ext) {
 el("export-btn").addEventListener("click", async () => {
   if (!currentTranscript) return;
   const t = currentTranscript;
-  const lines = [
-    `# Transcript: ${t.file}`,
-    `# Duration: ${Math.round(t.duration_s)}s · Speakers: ${t.speakers}`,
-    "",
-  ];
-  let last = null;
-  const mmss = (s) => {
-    const m = Math.floor(s / 60), sec = Math.round(s % 60);
-    return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
-  };
-  for (const seg of t.segments) {
-    if (seg.speaker !== last) lines.push("");
-    lines.push(`${seg.speaker} [${mmss(seg.start)}]: ${cleanDash(seg.text)}`);
-    last = seg.speaker;
-  }
+  // Hand the exporter structured segments so it can render the real format
+  // for whichever extension (.md / .txt / .srt) the user picks in the dialog.
   const out = await window.api.export({
-    markdown: lines.join("\n"),
+    title: t.file || el("file-name").textContent || "Transcript",
+    duration: t.duration_s || 0,
+    speakers: t.speakers || 0,
+    segments: (t.segments || []).map((s) => ({
+      start: s.start, end: s.end, speaker: s.speaker, text: cleanDash(s.text),
+    })),
     defaultName: suggestedExportName(t, "md"),
   });
   if (out) alert("Saved to " + out);
